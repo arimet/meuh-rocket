@@ -33,11 +33,40 @@ export class GameController {
   private result: RunResult | null = null
   private clock = 0
   private emitted = 0 // ticks whose events were emitted
+  private launched = 0
+  private fast = 1
+  private solutionShown = false
 
   constructor(readonly level: Level, private hooks: ControllerHooks = {}) {}
 
   get arrows(): Arrows {
     return this.placed
+  }
+
+  // Fast-forward for the run itself; the failure scene and the rewind keep their pace.
+  get speed(): number {
+    return this.fast
+  }
+
+  set speed(v: number) {
+    this.fast = v === 2 || v === 4 ? v : 1
+  }
+
+  get launches(): number {
+    return this.launched
+  }
+
+  get usedSolution(): boolean {
+    return this.solutionShown
+  }
+
+  // Replaces the player's arrows with the level's stored solution.
+  showSolution(): boolean {
+    const sol = this.level.solution
+    if (this.phase !== 'placing' || !sol) return false
+    this.placed = new Map(sol)
+    this.solutionShown = true
+    return true
   }
 
   remaining(dir: Dir): number {
@@ -64,6 +93,7 @@ export class GameController {
     if (this.phase !== 'placing') return false
     this.result = run(this.level, this.placed)
     this.emitted = 0
+    this.launched++
     this.enter('running')
     return true
   }
@@ -76,7 +106,7 @@ export class GameController {
   }
 
   update(dt: number): Frame {
-    this.clock += dt
+    this.clock += this.phase === 'running' ? dt * this.fast : dt
     const r = this.result
     if (!r || this.phase === 'placing') {
       const s = createState(this.level, this.placed)

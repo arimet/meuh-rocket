@@ -9,6 +9,8 @@ export interface ScreenHandlers {
   onClear(): void
   onMenu(): void
   onNext(): void
+  onSolution(): void
+  onSpeed(): void
 }
 
 const DIR_LABEL: Record<Dir, string> = { N: 'haut', E: 'droite', S: 'bas', W: 'gauche' }
@@ -33,6 +35,12 @@ const hanging = (cls: string, ...children: HTMLElement[]) => {
   sign.append(...children)
   wrap.append(h('span', 'hanging-ropes'), sign)
   return wrap
+}
+const starRow = (n: number, cls = 'stars') => {
+  const el = h('div', cls)
+  el.innerHTML = [0, 1, 2].map(k => icon('star', k < n ? 'on' : 'off')).join('')
+  el.setAttribute('aria-label', `${n} étoile${n > 1 ? 's' : ''} sur 3`)
+  return el
 }
 const actions = (...children: HTMLElement[]) => {
   const el = h('div', 'actions')
@@ -90,8 +98,10 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   // arrow controls sit together: the stock, and the button that empties the board back into it
   const clear = button('Retirer les flèches', 'small clear', on.onClear, icon('clear'))
   clear.setAttribute('aria-label', 'Retirer les flèches')
+  const solution = button('Solution', 'small solution', () => openConfirm(), icon('bulb'))
+  solution.setAttribute('aria-label', 'Afficher la solution')
   const arrows = h('div', 'hud-arrows')
-  arrows.append(stock, clear)
+  arrows.append(stock, clear, solution)
   const menu = button('Menu', 'small menu', on.onMenu, icon('menu'))
   menu.setAttribute('aria-label', 'Menu')
   const extra = h('div', 'hud-extra')
@@ -99,18 +109,37 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   top.append(info, arrows, extra)
   const bar = h('footer', 'hud-bar')
   const launch = button('Lancer', 'red launch', on.onLaunch, icon('play'))
-  bar.append(launch)
+  const speed = button('×1', 'small speed', on.onSpeed, icon('fast'))
+  speed.setAttribute('aria-label', 'Vitesse ×1 (touche F)')
+  bar.append(launch, speed)
   hud.append(top, bar)
 
   const victory = h('section', 'screen victory')
-  const vStars = h('div', 'stars')
+  let vStars: HTMLElement = h('div', 'stars')
   const vTitle = h('h2', 'logo')
   const vText = h('p', 'paper')
   const vNext = button('Niveau suivant', 'red big', on.onNext, icon('play'))
-  victory.append(hanging('big', vStars, vTitle), vText, actions(button('Menu', '', on.onMenu, icon('menu')), vNext))
+  const vSignWrap = hanging('big', vStars, vTitle)
+  const vSign = vSignWrap.querySelector('.sign') as HTMLElement
+  victory.append(vSignWrap, vText, actions(button('Menu', '', on.onMenu, icon('menu')), vNext))
+
+  // confirmation before revealing the solution: it costs the level's stars
+  const confirm = h('div', 'dialog')
+  confirm.setAttribute('role', 'dialog')
+  confirm.setAttribute('aria-modal', 'true')
+  confirm.setAttribute('aria-labelledby', 'confirm-title')
+  const cTitle = h('h2', '', 'Afficher la solution\u00a0?')
+  cTitle.id = 'confirm-title'
+  const cYes = button('Afficher', 'red', () => { closeConfirm(); on.onSolution() }, icon('bulb'))
+  const cNo = button('Annuler', '', () => closeConfirm())
+  confirm.append(hanging('', cTitle), h('p', 'paper', 'Tu pourras toujours finir le niveau, mais tu ne gagneras pas d’étoile cette fois.'), actions(cNo, cYes))
+  const openConfirm = () => { confirm.classList.add('on'); cYes.focus() }
+  const closeConfirm = () => { confirm.classList.remove('on'); solution.focus() }
+  confirm.addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirm() })
+  confirm.addEventListener('click', e => { if (e.target === confirm) closeConfirm() })
 
   const portrait = h('div', 'portrait paper', 'Tourne ton téléphone pour jouer')
-  root.append(title, select, hud, victory, portrait)
+  root.append(title, select, hud, victory, confirm, portrait)
   const all = [title, select, hud, victory]
   const only = (el: HTMLElement) => all.forEach(s => s.classList.toggle('on', s === el))
 
@@ -127,8 +156,9 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
         b.disabled = locked
         b.innerHTML = locked ? icon('lock', 'crate-lock') : `<span class="crate-num">${l.id}</span>`
         if (!locked) b.append(h('span', 'crate-name', l.name))
-        if (done) b.insertAdjacentHTML('beforeend', `<span class="crate-star">${icon('star')}</span>`)
-        b.setAttribute('aria-label', `Niveau ${l.id} : ${locked ? 'verrouillé' : l.name}${done ? ', réussi' : ''}`)
+        const stars = progress.stars[l.id] ?? 0
+        if (done) b.append(starRow(stars, 'crate-stars'))
+        b.setAttribute('aria-label', `Niveau ${l.id} : ${locked ? 'verrouillé' : l.name}${done ? `, réussi, ${stars} étoile${stars > 1 ? 's' : ''}` : ''}`)
         b.addEventListener('click', () => { if (!locked) on.onSelect(l.id) })
         return b
       }))
@@ -143,6 +173,11 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
       showIdea(true)
     },
     foldIdea: () => showIdea(false),
+    setSpeed(n: number) {
+      speed.querySelector('.label')!.textContent = `×${n}`
+      speed.setAttribute('aria-label', `Vitesse ×${n} (touche F)`)
+      speed.classList.toggle('on', n > 1)
+    },
     updateHud(s: { remaining: Record<Dir, number>; running: boolean; busy: boolean }) {
       for (const d of ['N', 'E', 'S', 'W'] as Dir[]) {
         const c = chips[d], n = s.remaining[d]
@@ -158,13 +193,15 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
       launch.classList.toggle('running', s.running)
       launch.disabled = s.busy && !s.running
       clear.disabled = s.busy
+      solution.disabled = s.busy
     },
-    showVictory(r: { excellent: boolean; hasNext: boolean }) {
-      vStars.innerHTML = icon('star') + icon('star') + (r.excellent ? icon('star') : '')
-      vTitle.textContent = r.excellent ? 'Excellent !' : 'Bravo !'
-      vText.textContent = r.hasNext
-        ? r.excellent ? 'Toutes les vaches sont à bord, avec moins de flèches que prévu.' : 'Toutes les vaches sont à bord.'
-        : 'Toutes les vaches de la ferme sont sauvées. Monde terminé !'
+    showVictory(r: { excellent: boolean; hasNext: boolean; stars: number; usedSolution: boolean }) {
+      vStars.replaceWith(starRow(r.stars))
+      vStars = vSign.querySelector('.stars') as HTMLElement
+      vTitle.textContent = r.usedSolution ? 'Mission accomplie' : r.excellent ? 'Excellent\u00a0!' : 'Bravo\u00a0!'
+      const line = r.usedSolution ? 'Solution utilisée : pas d’étoile cette fois.'
+        : r.excellent ? 'Toutes les vaches sont à bord, avec moins de flèches que prévu.' : 'Toutes les vaches sont à bord.'
+      vText.textContent = r.hasNext ? line : `${line} Monde terminé !`
       vNext.hidden = !r.hasNext
       only(victory)
     },

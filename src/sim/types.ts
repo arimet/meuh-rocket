@@ -19,6 +19,7 @@ export interface Level {
   cows: Spawn[]
   ufos: Spawn[]
   stock: Record<Dir, number>
+  solution?: Arrows // a known solution, shown on request
 }
 
 export type Arrows = ReadonlyMap<number, Dir>

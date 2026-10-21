@@ -194,4 +194,54 @@ describe('GameController', () => {
     expect(Math.abs(t - (UNDO_ABDUCT_SECONDS + REWIND_SECONDS))).toBeLessThan(0.06)
     expect(UNDO_ABDUCT_SECONDS + REWIND_SECONDS).toBeLessThanOrEqual(2)
   })
+
+  it('counts launches', () => {
+    const c = make()
+    expect(c.launches).toBe(0)
+    c.launch()
+    c.stop()
+    c.launch()
+    expect(c.launches).toBe(2)
+  })
+
+  it('applies the stored solution and remembers it was used', () => {
+    const l = lvl(reference, { cows: [[0, 0, 'E']], stock: { S: 1, W: 1 } })
+    const c = new GameController({ ...l, solution: new Map([[1, 'S']]) })
+    c.place(2, 'W')
+    expect(c.usedSolution).toBe(false)
+    expect(c.showSolution()).toBe(true)
+    expect([...c.arrows]).toEqual([[1, 'S']])
+    expect(c.usedSolution).toBe(true)
+    c.launch()
+    expect(c.showSolution()).toBe(false) // not while running
+  })
+
+  it('has no solution to show when the level stores none', () => {
+    expect(make().showSolution()).toBe(false)
+  })
+
+  it('fast-forward speeds up the run but not the rewind', () => {
+    const timeTo = (speed: number, phase: Phase) => {
+      const c = new GameController(lvl(['+-+-+-+-+-+-+-+-+-+-+-+-+', '|. . . . . . . . . . . .|', '+-+-+-+-+-+-+-+-+-+-+-+-+'], { cows: [[0, 0, 'E']] }))
+      c.speed = speed
+      c.launch()
+      let t = 0, f = c.update(0)
+      while (f.phase !== phase && t < 60) { f = c.update(0.01); t += 0.01 }
+      return { t, c }
+    }
+    const slow = timeTo(1, 'cause').t, fast = timeTo(4, 'cause').t
+    expect(fast).toBeLessThan(slow / 3)
+    const { c } = timeTo(4, 'rewinding')
+    let r = 0, f = c.update(0)
+    while (f.phase === 'rewinding') { f = c.update(0.01); r += 0.01 }
+    expect(Math.abs(r - REWIND_SECONDS)).toBeLessThan(0.05)
+  })
+
+  it('only accepts 1, 2 or 4 as speed', () => {
+    const c = make()
+    c.speed = 3
+    expect(c.speed).toBe(1)
+    c.speed = 4
+    expect(c.speed).toBe(4)
+  })
 })

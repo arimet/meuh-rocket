@@ -76,3 +76,16 @@ describe('directions', () => {
     expect(reverse('N')).toBe('S')
   })
 })
+
+describe('stored solution', () => {
+  it('parses an optional solution into arrows', () => {
+    const l = parseLevel({ grid: ['+-+-+-+', '|. . R|', '+-+-+-+'], cows: [[0, 0, 'E']], stock: { S: 1 }, solution: [[1, 0, 'S']] })
+    expect([...l.solution!]).toEqual([[1, 'S']])
+  })
+  it('is undefined when absent', () => {
+    expect(parseLevel({ grid: ['+-+-+', '|. R|', '+-+-+'], cows: [[0, 0, 'E']] }).solution).toBeUndefined()
+  })
+  it('rejects a solution outside the grid', () => {
+    expect(() => parseLevel({ grid: ['+-+-+', '|. R|', '+-+-+'], cows: [[0, 0, 'E']], solution: [[5, 0, 'S']] })).toThrow()
+  })
+})

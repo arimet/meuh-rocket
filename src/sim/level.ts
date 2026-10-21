@@ -85,6 +85,19 @@ export function parseLevel(json: unknown): Level {
     stock[d] = n as number
   }
 
+  let solution: Map<number, Dir> | undefined
+  if (j.solution !== undefined) {
+    if (!Array.isArray(j.solution)) fail('« solution » doit être une liste')
+    solution = new Map()
+    for (const [i, s] of (j.solution as unknown[]).entries()) {
+      if (!Array.isArray(s) || s.length !== 3) fail(`solution[${i}] : [x, y, direction] attendu`)
+      const [x, y, dir] = s
+      if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= width || y >= height) fail(`solution[${i}] : hors de la grille`)
+      if (!isDir(dir)) fail(`solution[${i}] : direction « ${dir} » inconnue`)
+      solution.set(y * width + x, dir)
+    }
+  }
+
   return {
     id: Number(j.id ?? 0),
     name: String(j.name ?? ''),
@@ -97,5 +110,6 @@ export function parseLevel(json: unknown): Level {
     cows: spawns('cows'),
     ufos: spawns('ufos'),
     stock,
+    solution,
   }
 }

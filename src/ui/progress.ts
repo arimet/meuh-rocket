@@ -1,11 +1,18 @@
 export interface Progress {
   unlocked: number // highest playable level id
   completed: number[]
+  stars: Record<number, number> // best stars per level id, 0..3
+}
+
+// 3 stars on the first launch, 2 within three launches, 1 after that; a revealed solution earns none.
+export function starsFor(launches: number, usedSolution: boolean): number {
+  if (usedSolution) return 0
+  return launches <= 1 ? 3 : launches <= 3 ? 2 : 1
 }
 
 export const STORAGE_KEY = 'meuh-rocket:progress'
 
-const fresh = (): Progress => ({ unlocked: 1, completed: [] })
+const fresh = (): Progress => ({ unlocked: 1, completed: [], stars: {} })
 const isId = (n: unknown): n is number => Number.isInteger(n) && (n as number) >= 1
 
 const browserStorage = (): Storage | null => {
@@ -20,7 +27,11 @@ export function loadProgress(storage: Pick<Storage, 'getItem'> | null = browserS
     const data = JSON.parse(raw)
     if (typeof data !== 'object' || data === null || !isId(data.unlocked)) return fresh()
     if (data.completed !== undefined && !Array.isArray(data.completed)) return fresh()
-    return { unlocked: data.unlocked, completed: [...new Set<number>((data.completed ?? []).filter(isId))] }
+    const stars: Record<number, number> = {}
+    if (typeof data.stars === 'object' && data.stars !== null)
+      for (const [k, v] of Object.entries(data.stars))
+        if (isId(Number(k)) && Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 3) stars[Number(k)] = v as number
+    return { unlocked: data.unlocked, completed: [...new Set<number>((data.completed ?? []).filter(isId))], stars }
   } catch {
     return fresh()
   }
@@ -30,9 +41,10 @@ export function saveProgress(p: Progress, storage: Pick<Storage, 'setItem'> | nu
   try { storage?.setItem(STORAGE_KEY, JSON.stringify(p)) } catch { /* progress just won't persist */ }
 }
 
-export function completeLevel(p: Progress, id: number, total: number): Progress {
+export function completeLevel(p: Progress, id: number, total: number, stars: number): Progress {
   return {
     unlocked: Math.max(p.unlocked, Math.min(id + 1, total)),
     completed: p.completed.includes(id) ? p.completed : [...p.completed, id],
+    stars: { ...p.stars, [id]: Math.max(p.stars[id] ?? 0, stars) },
   }
 }

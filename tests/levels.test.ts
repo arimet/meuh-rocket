@@ -25,8 +25,13 @@ const IDEAS: Record<number, (l: Level, minArrows: number, example: Arrows) => vo
     })
     expect(shared).toBe(true)
   },
-  7: (l, m) => { expect(l.cows.length).toBeGreaterThanOrEqual(8); expect(m).toBeLessThanOrEqual(2) },
-  8: (l) => { expect(l.ufos).toHaveLength(1) },
+  7: (l) => { expect(l.cows.length).toBeGreaterThanOrEqual(8); expect(l.ufos).toHaveLength(0) },
+  8: (l, _m, example) => {
+    expect(l.ufos).toHaveLength(1)
+    // the solution traps the UFO: one arrow sends it round and round
+    const ufoHits = run(l, example).events.filter(e => e.type === 'arrow' && e.actor >= l.cows.length)
+    expect([...example.keys()].some(cell => ufoHits.filter(e => e.cell === cell).length >= 2)).toBe(true)
+  },
   9: (l) => { expect(l.ufos).toHaveLength(2) },
   10: (l) => { expect(holes(l)).toBeGreaterThan(0); expect(innerWall(l)).toBe(true); expect(l.ufos.length).toBeGreaterThan(0) },
 }
@@ -44,6 +49,13 @@ describe('levels', () => {
 
   for (const level of LEVELS) {
     describe(`level ${level.id} (${level.name})`, () => {
+      it('stores a winning solution within its stock', () => {
+        const sol = level.solution!
+        expect(sol).toBeDefined()
+        expect(run(level, sol).outcome.result).toBe('won')
+        for (const d of ['N', 'E', 'S', 'W'] as const)
+          expect([...sol.values()].filter(v => v === d).length).toBeLessThanOrEqual(level.stock[d])
+      })
       it('is not won without arrows', () => {
         expect(run(level, new Map()).outcome.result).toBe('failed')
       })

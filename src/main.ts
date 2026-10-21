@@ -10,7 +10,7 @@ import { canPlace } from './sim/sim'
 import type { Dir, Level } from './sim/types'
 import { icon } from './ui/icons'
 import { createPicker } from './ui/picker'
-import { completeLevel, loadProgress, saveProgress } from './ui/progress'
+import { completeLevel, loadProgress, saveProgress, starsFor } from './ui/progress'
 import { createScreens } from './ui/screens'
 
 const canvas = document.getElementById('scene') as HTMLCanvasElement
@@ -21,6 +21,7 @@ let level: Level = LEVELS[0]
 let game = new GameController(level)
 let playing = false
 let phase: Phase = 'placing'
+let speed = 1 // kept across levels
 
 const remaining = () => Object.fromEntries(DIRS.map(d => [d, game.remaining(d)])) as Record<Dir, number>
 const refreshHud = () => screens.updateHud({ remaining: remaining(), running: phase === 'running', busy: phase !== 'placing' })
@@ -32,16 +33,18 @@ function startLevel(id: number) {
     onPhase: p => { phase = p; closePicker(); refreshHud(); if (p === 'cause') sfx.fail() },
     onEvent: e => { if (e.type === 'saved') sfx.moo(); if (e.type === 'abducted') sfx.beam() },
     onWin: async r => {
-      progress = completeLevel(progress, level.id, LEVELS.length)
+      const stars = starsFor(game.launches, game.usedSolution)
+      progress = completeLevel(progress, level.id, LEVELS.length, stars)
       saveProgress(progress)
       const current = game
       sfx.launch()
       await scene.launchRocket()
       if (game !== current) return
       sfx.win()
-      screens.showVictory({ excellent: r.excellent, hasNext: level.id < LEVELS.length })
+      screens.showVictory({ excellent: r.excellent, hasNext: level.id < LEVELS.length, stars, usedSolution: game.usedSolution })
     },
   })
+  game.speed = speed
   scene.loadLevel(level)
   scene.setArrows(game.arrows)
   playing = true
@@ -62,7 +65,18 @@ const screens = createScreens(ui, {
   onClear: () => { game.clear(); scene.setArrows(game.arrows); refreshHud() },
   onMenu: () => { backdrop(); screens.showSelect(LEVELS, progress) },
   onNext: () => startLevel(level.id + 1),
+  onSpeed: () => cycleSpeed(),
+  onSolution: () => {
+    closePicker()
+    if (game.showSolution()) { scene.setArrows(game.arrows); refreshHud(); sfx.place() }
+  },
 })
+
+function cycleSpeed() {
+  speed = speed === 1 ? 2 : speed === 2 ? 4 : 1
+  game.speed = speed
+  screens.setSpeed(speed)
+}
 
 let target: number | null = null
 function closePicker() {
@@ -106,6 +120,7 @@ const KEYS: Record<string, Dir> = { ArrowUp: 'N', ArrowRight: 'E', ArrowDown: 'S
 addEventListener('keydown', e => {
   if (!playing) return
   if (e.key === 'Escape') closePicker()
+  if (e.key === 'f' || e.key === 'F') cycleSpeed()
   if (hovered === null) return
   const dir = KEYS[e.key]
   if (dir) {
