@@ -23,6 +23,7 @@ export interface ControllerHooks {
 
 export const CAUSE_SECONDS = 0.8
 export const ABDUCT_SECONDS = 2.2 // the abduction plays out as its own little scene
+export const UNDO_ABDUCT_SECONDS = 0.45 // ...and is played backwards, fast, before the board rewinds
 export const REWIND_SECONDS = 1.5
 
 // Plays a precomputed run forward, then on failure shows the cause and rewinds it.
@@ -102,7 +103,9 @@ export class GameController {
     if (this.phase === 'cause' && this.clock >= this.causeSeconds()) this.enter('rewinding')
 
     if (this.phase === 'rewinding') {
-      const p = this.clock / REWIND_SECONDS
+      const undo = this.causeSeconds() === ABDUCT_SECONDS ? UNDO_ABDUCT_SECONDS : 0
+      if (this.clock < undo) return this.frame(h[last], h[last], 0, 1 - this.clock / undo)
+      const p = (this.clock - undo) / REWIND_SECONDS
       if (p >= 1) {
         this.result = null
         this.enter('placing')
@@ -110,7 +113,7 @@ export class GameController {
       }
       const f = (1 - p) * last
       const idx = Math.floor(f)
-      return this.frame(h[idx], h[Math.min(idx + 1, last)], f - idx)
+      return this.frame(h[idx], h[Math.min(idx + 1, last)], f - idx, 0)
     }
     return this.frame(h[last], h[last], 0)
   }
@@ -120,12 +123,14 @@ export class GameController {
     return r?.outcome.result === 'failed' && r.outcome.cause.type === 'abducted' ? ABDUCT_SECONDS : CAUSE_SECONDS
   }
 
-  private frame(from: SimState, to: SimState, alpha: number): Frame {
+  // causeT defaults to the progress through the cause phase; rewinding passes it explicitly
+  private frame(from: SimState, to: SimState, alpha: number, causeT?: number): Frame {
     const r = this.result
-    const failure = this.phase === 'cause' && r?.outcome.result === 'failed' ? r.outcome.cause : null
-    const highlight = failure && failure.type !== 'loop' ? failure.actor : null
-    const causeT = failure ? Math.min(1, this.clock / this.causeSeconds()) : 0
-    return { from, to, alpha, phase: this.phase, highlight, cause: failure, causeT }
+    const showing = this.phase === 'cause' || this.phase === 'rewinding'
+    const failure = showing && r?.outcome.result === 'failed' ? r.outcome.cause : null
+    const highlight = this.phase === 'cause' && failure && failure.type !== 'loop' ? failure.actor : null
+    const t = causeT ?? (this.phase === 'cause' ? Math.min(1, this.clock / this.causeSeconds()) : 0)
+    return { from, to, alpha, phase: this.phase, highlight, cause: failure, causeT: failure ? t : 0 }
   }
 
   private enter(p: Phase) {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ABDUCT_SECONDS, CAUSE_SECONDS, GameController, REWIND_SECONDS, type Phase } from '../src/game/controller'
+import { ABDUCT_SECONDS, CAUSE_SECONDS, GameController, REWIND_SECONDS, UNDO_ABDUCT_SECONDS, type Phase } from '../src/game/controller'
 import type { Dir } from '../src/sim/types'
 import { lvl } from './helpers'
 
@@ -173,5 +173,25 @@ describe('GameController', () => {
     let t = 0
     while (f.phase === 'cause') { f = c.update(0.02); t += 0.02 }
     expect(Math.abs(t - CAUSE_SECONDS)).toBeLessThan(0.05)
+  })
+
+  it('rewinds the abduction itself before rewinding the board', () => {
+    const c = new GameController(lvl(['+-+-+-+-+-+-+', '|. . . . . .|', '+-+-+-+-+-+-+'], { cows: [[0, 0, 'E']], ufos: [[5, 0, 'W']] }))
+    c.launch()
+    let f = c.update(0)
+    while (f.phase !== 'rewinding') f = c.update(0.02)
+    const undo: number[] = [], board: number[] = []
+    let t = 0
+    while (f.phase === 'rewinding') {
+      expect(f.cause?.type).toBe('abducted')
+      if (f.causeT > 0) { expect(board).toHaveLength(0); undo.push(f.causeT) } else board.push(f.from.tick)
+      f = c.update(0.02)
+      t += 0.02
+    }
+    expect(undo[0]).toBeGreaterThan(0.9)
+    expect(undo.every((v, k) => k === 0 || v <= undo[k - 1])).toBe(true)
+    expect(board[0]).toBeGreaterThan(board.at(-1)!)
+    expect(Math.abs(t - (UNDO_ABDUCT_SECONDS + REWIND_SECONDS))).toBeLessThan(0.06)
+    expect(UNDO_ABDUCT_SECONDS + REWIND_SECONDS).toBeLessThanOrEqual(2)
   })
 })

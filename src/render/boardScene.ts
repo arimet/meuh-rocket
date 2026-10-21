@@ -345,7 +345,7 @@ export class BoardScene {
       const k = from.status === 'active' ? a : 1
       o.position.y = -0.45 * k
       o.scale.setScalar(1 - 0.3 * k)
-      o.visible = blink && (frame.phase === 'cause' || frame.phase === 'running')
+      o.visible = blink && frame.phase !== 'placing' && frame.phase !== 'won' // rewinding lifts it back out of the hole
     }
   }
 
