@@ -142,9 +142,13 @@ screens.showTitle()
 const direct = Number(new URLSearchParams(location.search).get('level'))
 if (import.meta.env.DEV && LEVELS.some(l => l.id === direct)) startLevel(direct)
 
-const dev = { timeScale: 1 } // dev-only slow motion, for checking animations
-let prev = performance.now()
 let clock = 0
+// dev-only: slow motion, and manual stepping for frame-by-frame captures
+const dev = {
+  timeScale: 1,
+  step(dt: number) { clock += dt; scene.render(game.update(dt), clock) },
+}
+let prev = performance.now()
 scene.renderer.setAnimationLoop(now => {
   const dt = Math.min(0.1, (now - prev) / 1000) * dev.timeScale
   prev = now

@@ -22,7 +22,7 @@ export interface ControllerHooks {
 }
 
 export const CAUSE_SECONDS = 0.8
-export const ABDUCT_SECONDS = 1.8 // the abduction plays out as its own little scene
+export const ABDUCT_SECONDS = 2.2 // the abduction plays out as its own little scene
 export const REWIND_SECONDS = 1.5
 
 // Plays a precomputed run forward, then on failure shows the cause and rewinds it.

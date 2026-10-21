@@ -2,7 +2,7 @@
 import * as THREE from 'three'
 import { parseLevel } from './sim/level'
 import {
-  MATERIALS, arrowGeometry, boardGeometry, cowGeometry, createUfo, farmDecor, rocketGeometry, tileCenter, ufoBeam,
+  MATERIALS, arrowGeometry, boardGeometry, createCow, createUfo, farmDecor, rocketGeometry, tileCenter, ufoBeam,
 } from './render/models'
 import { createStage } from './render/stage'
 
@@ -42,7 +42,7 @@ const makeUfo = createUfo
 const boardView = new THREE.Group()
 const decor = farmDecor(level)
 boardView.add(shadowed(new THREE.Mesh(boardGeometry(level), lit)), decor)
-const cowGeo = cowGeometry(), arrowGeo = arrowGeometry()
+const arrowGeo = arrowGeometry()
 const at = (o: THREE.Object3D, x: number, y: number, rot = 0) => {
   o.position.copy(tileCenter(level, x, y))
   o.rotation.y = rot
@@ -51,7 +51,7 @@ const at = (o: THREE.Object3D, x: number, y: number, rot = 0) => {
 }
 at(shadowed(new THREE.Mesh(rocketGeometry(), lit)), 9, 3)
 for (const [x, y, r] of [[1, 1, 0], [2, 1, 0], [5, 4, Math.PI / 2], [8, 6, -Math.PI / 2], [3, 7, Math.PI]] as const)
-  at(shadowed(new THREE.Mesh(cowGeo, lit)), x, y, r)
+  at(createCow(lit), x, y, r)
 for (const [x, y, r] of [[4, 1, -Math.PI / 2], [7, 4, 0], [9, 6, Math.PI / 2]] as const)
   at(shadowed(new THREE.Mesh(arrowGeo, lit)), x, y, r)
 const boardUfo = at(makeUfo(), 6, 6)
@@ -67,7 +67,7 @@ plinth.position.y = -0.1
 const turntable = new THREE.Group()
 turntable.add(plinth)
 const place = (o: THREE.Object3D, x: number, z: number, y = 0) => { o.position.set(x, y, z); turntable.add(o); return o }
-place(shadowed(new THREE.Mesh(cowGeo, lit)), -1.2, 0.6)
+place(createCow(lit), -1.2, 0.6)
 place(shadowed(new THREE.Mesh(rocketGeometry(), lit)), 1.1, -0.6)
 place(makeUfo(), -0.6, -1.3, 0.9)
 place(shadowed(new THREE.Mesh(arrowGeo, lit)), 0.9, 1.3)

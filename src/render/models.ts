@@ -53,8 +53,8 @@ export const MATERIALS = {
   }),
 }
 
-// Cow facing +x, standing on y = 0.
-export function cowGeometry(): THREE.BufferGeometry {
+// Cow facing +x, standing on y = 0, drawn as one voxel grid.
+function drawCow(): VoxelGrid {
   const g = new VoxelGrid(23, 20, 11)
   const white = C('cowWhite'), spot = C('cowSpot')
   for (const x of [4, 12]) for (const z of [1, 7]) {
@@ -90,7 +90,60 @@ export function cowGeometry(): THREE.BufferGeometry {
   for (const [z, z1, z2] of [[2, 1, 0], [8, 9, 10]]) {
     g.set(18, 17, z, C('horn')); g.set(18, 18, z1, C('horn')); g.set(18, 19, z2, C('horn'))
   }
-  return actor(g).translate(-0.06, 0, 0)
+  return g
+}
+
+export function cowGeometry(): THREE.BufferGeometry {
+  return actor(drawCow()).translate(-0.06, 0, 0)
+}
+
+type CowPart = 'body' | 'head' | 'tail' | 'legFL' | 'legFR' | 'legBL' | 'legBR'
+// Pivot of each moving part, in cow voxel coordinates (hips, neck, tail root).
+const COW_PIVOTS: Record<CowPart, [number, number, number]> = {
+  body: [0, 0, 0], head: [15.5, 12, 5], tail: [1, 12.5, 5],
+  legFL: [13, 5, 2], legFR: [13, 5, 8], legBL: [5, 5, 2], legBR: [5, 5, 8],
+}
+const cowPart = (x: number, y: number, z: number): CowPart => {
+  if (y <= 4 && (x >= 4 && x <= 6 || x >= 12 && x <= 14)) return `leg${x > 9 ? 'F' : 'B'}${z < 5 ? 'L' : 'R'}` as CowPart
+  if (x >= 16 && y >= 9) return 'head'
+  if (x <= 1) return 'tail'
+  return 'body'
+}
+
+let cowParts: Record<CowPart, THREE.BufferGeometry> | null = null
+
+// Articulated cow: legs, head and tail are separate meshes pivoting at their joints.
+// Left is the cow's left (−z when facing +x).
+export function createCow(material: THREE.Material): THREE.Group {
+  if (!cowParts) {
+    const src = drawCow()
+    const grids = {} as Record<CowPart, VoxelGrid>
+    for (const k of Object.keys(COW_PIVOTS) as CowPart[]) grids[k] = new VoxelGrid(src.sx, src.sy, src.sz)
+    for (let y = 0; y < src.sy; y++) for (let z = 0; z < src.sz; z++) for (let x = 0; x < src.sx; x++) {
+      const c = src.get(x, y, z)
+      if (c) grids[cowPart(x, y, z)].set(x, y, z, c)
+    }
+    // AO is computed per part, so meshes keep their own shading when they move
+    cowParts = {} as Record<CowPart, THREE.BufferGeometry>
+    for (const k of Object.keys(grids) as CowPart[]) {
+      const [px, py, pz] = COW_PIVOTS[k]
+      cowParts[k] = mesh(grids[k], { voxelSize: 1 / R, anchor: 'corner', jitter: 0.035 }).translate(-px / R, -py / R, -pz / R)
+    }
+  }
+  const group = new THREE.Group()
+  const rig = new THREE.Group() // body bob and tilt happen here, legs stay attached
+  group.add(rig)
+  const parts = {} as Record<CowPart, THREE.Mesh>
+  for (const k of Object.keys(COW_PIVOTS) as CowPart[]) {
+    const [px, py, pz] = COW_PIVOTS[k]
+    const m = new THREE.Mesh(cowParts[k], material)
+    m.position.set(px / R - 23 / 2 / R - 0.06, py / R, pz / R - 11 / 2 / R)
+    m.castShadow = m.receiveShadow = true
+    rig.add(m)
+    parts[k] = m
+  }
+  group.userData = { rig, ...parts }
+  return group
 }
 
 // Saucer with a little alien in the cockpit, rim lights and a glass dome.

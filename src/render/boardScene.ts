@@ -3,16 +3,16 @@ import type { Frame } from '../game/controller'
 import { TILE } from '../sim/constants'
 import type { Actor, Arrows, Dir, Level } from '../sim/types'
 import {
-  BOARD_MARGIN, MATERIALS, arrowGeometry, boardGeometry, cowGeometry, createUfo, farmDecor, rocketGeometry, tileCenter, ufoBeam,
+  BOARD_MARGIN, MATERIALS, arrowGeometry, boardGeometry, createCow, createUfo, farmDecor, rocketGeometry, tileCenter, ufoBeam,
 } from './models'
 import { createStage } from './stage'
+import { type Pose, gait } from './gait'
 import { VOXELS_PER_TILE } from './voxel'
 
 // Arrow model points north (-z), cow model faces east (+x).
 const ARROW_YAW: Record<Dir, number> = { N: 0, E: -Math.PI / 2, S: Math.PI, W: Math.PI / 2 }
 const COW_YAW: Record<Dir, number> = { E: 0, N: Math.PI / 2, W: Math.PI, S: -Math.PI / 2 }
 const UFO_HEIGHT = 1.05
-const ABDUCT_BACK = 0.55
 const PITCH = THREE.MathUtils.degToRad(58) // camera elevation above the board
 
 const shadowed = <T extends THREE.Object3D>(o: T) => {
@@ -22,6 +22,24 @@ const shadowed = <T extends THREE.Object3D>(o: T) => {
 
 const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 const easeOut = (p: number) => 1 - (1 - p) ** 3
+const smooth = (p: number) => { const q = Math.max(0, Math.min(1, p)); return q * q * (3 - 2 * q) }
+
+interface CowRig { rig: THREE.Group; head: THREE.Mesh; tail: THREE.Mesh; legFL: THREE.Mesh; legFR: THREE.Mesh; legBL: THREE.Mesh; legBR: THREE.Mesh }
+
+// Legs swing about the cow's side axis (z); `splay` spreads them outward (about x).
+function poseCow(c: CowRig, pose: Pose, splay = 0) {
+  const legs = [c.legFL, c.legFR, c.legBL, c.legBR]
+  legs.forEach((leg, k) => leg.rotation.set(k % 2 === 0 ? splay : -splay, 0, pose.legs[k]))
+  c.rig.position.y = pose.bob
+  c.head.rotation.set(0, 0, pose.nod)
+  c.tail.rotation.set(pose.tail, 0, 0)
+}
+
+// Standing still: a slow breath, the odd head bob and tail swish.
+function idlePose(time: number, i: number): Pose {
+  const t = time + i * 1.7
+  return { legs: [0, 0, 0, 0], bob: 0.004 * Math.sin(t * 2), nod: 0.05 * Math.sin(t * 1.3) - 0.04, tail: 0.35 * Math.sin(t * 2.2) * Math.max(0, Math.sin(t * 0.6)) }
+}
 
 const lerpAngle = (a: number, b: number, t: number) => {
   const d = Math.atan2(Math.sin(b - a), Math.cos(b - a))
@@ -37,6 +55,8 @@ export class BoardScene {
   private actors: THREE.Object3D[] = []
   private beams: THREE.Mesh[] = []
   private yaw: number[] = []
+  private walked: number[] = []
+  private lastPos: THREE.Vector2[] = []
   private decor: THREE.Group | null = null
   private cursor = new THREE.Group()
   private cursorFill: THREE.Mesh
@@ -58,7 +78,6 @@ export class BoardScene {
     new THREE.PointsMaterial({ color: '#eaff9a', size: 0.07, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }),
   )
   private level: Level | null = null
-  private cowGeo = cowGeometry()
   private arrowGeo = arrowGeometry()
   private rocketGeo = rocketGeometry()
   private raycaster = new THREE.Raycaster()
@@ -118,7 +137,7 @@ export class BoardScene {
     this.root.add(this.arrowsGroup, this.cursor, this.sparkles, this.glow)
     this.actors = []
     this.beams = []
-    for (const _ of level.cows) this.actors.push(shadowed(new THREE.Mesh(this.cowGeo, MATERIALS.lit)))
+    for (const _ of level.cows) this.actors.push(createCow(MATERIALS.lit))
     for (const _ of level.ufos) {
       const u = shadowed(createUfo())
       const beam = ufoBeam()
@@ -130,6 +149,8 @@ export class BoardScene {
       this.actors.push(u)
     }
     this.yaw = this.actors.map(() => 0)
+    this.walked = this.actors.map(() => 0)
+    this.lastPos = this.actors.map(() => new THREE.Vector2(-99, -99))
     this.root.add(...this.actors)
     this.resize()
   }
@@ -287,12 +308,11 @@ export class BoardScene {
 
     if (to.kind === 'ufo') {
       o.position.y = UFO_HEIGHT + Math.sin(time * 2 + i) * 0.05
-      o.rotation.y = time * 0.7 + i
+      o.rotation.set(0, time * 0.7 + i, 0)
       const beam = this.beams[i - level.cows.length]
-      const beamMat = beam.material as THREE.MeshBasicMaterial
-      beamMat.opacity = 0.14 + Math.sin(time * 3 + i) * 0.03
-      beam.scale.set(1, UFO_HEIGHT, 1)
-      if (abduction?.by === i) this.abductUfo(o, beam, frame.to.actors[abduction.actor], frame.causeT, time)
+      ;(beam.material as THREE.MeshBasicMaterial).opacity = 0.12 + Math.sin(time * 3 + i) * 0.03
+      beam.scale.set(1, o.position.y, 1)
+      if (abduction?.by === i) this.abductUfo(o, beam, frame.causeT, time)
       else if (to.status === 'lost') {
         if (from.status === 'active') { o.position.y -= a * 1.2; o.scale.setScalar(1 - a * 0.8) }
         else o.visible = frame.phase === 'cause' && frame.highlight === i && Math.floor(time * 6) % 2 === 0
@@ -300,9 +320,15 @@ export class BoardScene {
       return
     }
 
+    // cow
+    const parts = o.userData as CowRig
     this.yaw[i] = snap ? target : lerpAngle(this.yaw[i], target, Math.min(1, dt * 18))
     o.rotation.set(0, this.yaw[i], 0)
-    if (moving && frame.phase === 'running') o.position.y = Math.abs(Math.sin(time * 16 + i * 1.7)) * 0.04
+    const step = Math.hypot(x - this.lastPos[i].x, y - this.lastPos[i].y)
+    this.lastPos[i].set(x, y)
+    if (step < 0.5) this.walked[i] += frame.phase === 'rewinding' ? -step : step
+    if (moving && (frame.phase === 'running' || frame.phase === 'rewinding')) poseCow(parts, gait(this.walked[i]))
+    else poseCow(parts, idlePose(time, i))
 
     if (to.status === 'saved') {
       o.visible = from.status === 'active'
@@ -311,7 +337,8 @@ export class BoardScene {
       const hole = level.cells[Math.round(to.y / TILE) * level.width + Math.round(to.x / TILE)] === 'hole'
       if (!hole) {
         // abducted: stays put until the cause phase plays the abduction
-        o.visible = frame.phase === 'running' || (abduction?.actor === i && this.abductCow(o, frame.causeT, time, i))
+        const ufo = abduction ? this.actors[abduction.by!] : null
+        o.visible = frame.phase === 'running' || (abduction?.actor === i && !!ufo && this.abductCow(o, parts, ufo, frame.causeT, time, i))
         return
       }
       const blink = frame.highlight === i ? Math.floor(time * 6) % 2 === 0 : true
@@ -322,48 +349,54 @@ export class BoardScene {
     }
   }
 
-  // The UFO glides over its victim, widens and pulses its beam, then hops once the cow is aboard.
-  private abductUfo(o: THREE.Object3D, beam: THREE.Mesh, cow: Actor, t: number, time: number) {
-    const level = this.level!
-    // hover slightly behind the cow (away from the camera) so its rise stays in view
-    const target = tileCenter(level, cow.x / TILE, cow.y / TILE).add(new THREE.Vector3(0, 0, -ABDUCT_BACK))
-    const glide = easeOut(Math.min(1, t / 0.2))
-    o.position.x += (target.x - o.position.x) * glide
-    o.position.z += (target.z - o.position.z) * glide
-    const hop = t > 0.82 ? Math.sin(((t - 0.82) / 0.18) * Math.PI) * 0.28 : 0
-    o.position.y = UFO_HEIGHT + hop
-    o.rotation.y = time * (t > 0.82 ? 6 : 1.6)
-    const on = t < 0.12 ? t / 0.12 : t > 0.86 ? Math.max(0, 1 - (t - 0.86) / 0.1) : 1
-    const mat = beam.material as THREE.MeshBasicMaterial
-    mat.opacity = 0.14 + on * (0.42 + Math.sin(time * 18) * 0.08) + (t > 0.78 && t < 0.86 ? 0.4 : 0)
-    beam.scale.set(1 + on * 0.45, UFO_HEIGHT + hop, 1 + on * 0.45)
-    this.sparkles.visible = on > 0
+  // The UFO holds its position: it dips, lowers its beam to the grass, takes the cow in through its hatch,
+  // retracts the beam and wobbles back up.
+  private abductUfo(o: THREE.Object3D, beam: THREE.Mesh, t: number, time: number) {
+    const dip = smooth(t / 0.15) * (1 - smooth((t - 0.78) / 0.12))
+    o.position.y = UFO_HEIGHT - 0.14 * dip + Math.sin(time * 2) * 0.02
+    const wob = t > 0.86 ? Math.sin(((t - 0.86) / 0.14) * Math.PI * 3) * 0.22 * (1 - (t - 0.86) / 0.14) : 0
+    o.rotation.set(wob, time * (0.7 + dip * 0.8), wob * 0.6)
+    // beam: grows down from the hatch, retracts back up into it
+    const down = smooth(t / 0.12), up = smooth((t - 0.8) / 0.1)
+    const len = o.position.y * down * (1 - up)
+    beam.scale.set(1 + 0.4 * down, Math.max(0.001, len), 1 + 0.4 * down)
+    const flash = t > 0.68 && t < 0.8 ? Math.sin(((t - 0.68) / 0.12) * Math.PI) : 0
+    ;(beam.material as THREE.MeshBasicMaterial).opacity = 0.12 + down * (1 - up) * (0.4 + Math.sin(time * 20) * 0.06) + flash * 0.4
+    const on = down * (1 - up)
+    this.glow.visible = this.sparkles.visible = on > 0.01
+    this.glow.position.set(o.position.x, 0.015, o.position.z)
+    this.glow.scale.setScalar(0.6 + on * 0.6 + Math.sin(time * 12) * 0.04)
+    ;(this.glow.material as THREE.MeshBasicMaterial).opacity = on * 0.6
     this.sparkles.position.set(o.position.x, 0, o.position.z)
-    this.glow.visible = on > 0
-    this.glow.position.set(o.position.x, 0.015, o.position.z + ABDUCT_BACK * 0.5)
-    this.glow.scale.setScalar(0.8 + on * 0.4 + Math.sin(time * 12) * 0.05)
-    ;(this.glow.material as THREE.MeshBasicMaterial).opacity = on * 0.55
     const pos = this.sparkles.geometry.attributes.position as THREE.BufferAttribute
     for (let k = 0; k < pos.count; k++) {
-      const h = ((time * 0.7 + k / pos.count) % 1)
-      const r = 0.12 + 0.22 * (1 - h)
-      pos.setXYZ(k, Math.cos(k * 2.4 + time * 3) * r, h * UFO_HEIGHT, Math.sin(k * 2.4 + time * 3) * r)
+      const h = (time * 0.9 + k / pos.count) % 1
+      const r = 0.1 + 0.25 * (1 - h)
+      pos.setXYZ(k, Math.cos(k * 2.4 + time * 4) * r, h * len, Math.sin(k * 2.4 + time * 4) * r)
     }
     pos.needsUpdate = true
   }
 
-  // The cow jolts, floats up the beam spinning and swaying, shrinks into the saucer. Returns visibility.
-  private abductCow(o: THREE.Object3D, t: number, time: number, i: number): boolean {
-    if (t >= 0.86) return false
-    const jolt = t < 0.15 ? Math.sin((t / 0.15) * Math.PI) * 0.12 : 0
-    const p = Math.max(0, Math.min(1, (t - 0.15) / 0.65))
-    const rise = p * p * (3 - 2 * p)
-    o.position.y = jolt + rise * (UFO_HEIGHT - 0.3)
-    o.position.z -= ABDUCT_BACK * rise * rise // drift into the saucer late, so the climb stays in view
-    this.yaw[i] += 0.06 + rise * 0.12
-    o.rotation.set(Math.sin(time * 7) * 0.25 * rise, this.yaw[i], Math.sin(time * 9 + 1) * 0.35 * rise + (t < 0.15 ? Math.sin(time * 60) * 0.08 : 0))
-    const shrink = t > 0.74 ? 1 - (t - 0.74) / 0.12 : 1
-    o.scale.setScalar((1 - rise * 0.35) * shrink)
+  // The cow startles, then is pulled up and into the beam axis, legs pedalling, tumbling slowly,
+  // and shrinks through the hatch. Returns whether it is still visible.
+  private abductCow(o: THREE.Object3D, parts: CowRig, ufo: THREE.Object3D, t: number, time: number, i: number): boolean {
+    if (t >= 0.76) return false
+    const startle = t > 0.06 && t < 0.2 ? Math.sin(((t - 0.06) / 0.14) * Math.PI) : 0
+    const p = Math.max(0, Math.min(1, (t - 0.2) / 0.54))
+    const pull = p * p // the beam pulls harder as the cow gets closer
+    const ground = o.position.clone()
+    const hatch = new THREE.Vector3(ufo.position.x, ufo.position.y - 0.12, ufo.position.z)
+    const center = Math.min(1, pull * 2.2)
+    o.position.set(ground.x + (hatch.x - ground.x) * center, startle * 0.14 + (hatch.y - 0.18) * pull, ground.z + (hatch.z - ground.z) * center)
+    o.rotation.set(0, this.yaw[i] + pull * Math.PI * 1.6, startle * 0.25 + pull * 0.7)
+    const shrink = t > 0.66 ? 1 - (t - 0.66) / 0.1 : 1
+    o.scale.setScalar(Math.max(0.001, (1 - pull * 0.3) * shrink))
+    // legs: splay on the startle, then pedal in the air
+    const kick = (k: number) => (p > 0 ? Math.sin(time * 26 + k * 1.9) * 0.65 * Math.min(1, p * 4) : 0)
+    poseCow(parts, {
+      legs: [kick(0) + startle * 0.5, kick(1) + startle * 0.5, kick(2) - startle * 0.5, kick(3) - startle * 0.5],
+      bob: 0, nod: -0.35 * startle - 0.25 * p, tail: Math.sin(time * 18) * 0.6 * (startle + p),
+    }, startle * 0.45 + p * 0.35)
     return true
   }
 
