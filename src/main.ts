@@ -130,6 +130,9 @@ addEventListener('orientationchange', onResize)
 
 scene.loadLevel(level)
 screens.showTitle()
+// dev shortcut: ?level=N opens a level directly, locked or not
+const direct = Number(new URLSearchParams(location.search).get('level'))
+if (import.meta.env.DEV && LEVELS.some(l => l.id === direct)) startLevel(direct)
 
 let prev = performance.now()
 scene.renderer.setAnimationLoop(now => {
