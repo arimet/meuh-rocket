@@ -53,6 +53,16 @@ describe('meshVoxels', () => {
     expect(Math.max(...top)).toBe(1)
   })
 
+  it('jitter varies voxel shades deterministically', () => {
+    const g = new VoxelGrid(8, 1, 8).box(0, 0, 0, 7, 0, 7, 1)
+    const a = brightness(meshVoxels(g, palette, { jitter: 0.1 }))
+    const b = brightness(meshVoxels(g, palette, { jitter: 0.1 }))
+    expect(a).toEqual(b)
+    expect(new Set(a.map(v => v.toFixed(3))).size).toBeGreaterThan(4)
+    expect(Math.max(...a)).toBeLessThanOrEqual(1.1 + 1e-6)
+    expect(Math.min(...a)).toBeGreaterThanOrEqual(0.55 * 0.9 - 1e-6)
+  })
+
   it('bottom-center anchor', () => {
     const geo = meshVoxels(new VoxelGrid(4, 2, 4).box(0, 0, 0, 3, 1, 3, 1), palette, { voxelSize: 0.25 })
     geo.computeBoundingBox()

@@ -1,9 +1,10 @@
 // Named colours shared by every voxel model. Night farm, warm light.
 export const PALETTE = {
-  grass1: '#5f9e43',
-  grass2: '#6aab4b',
-  grass3: '#558f3c',
+  grass1: '#4b8439',
+  grass2: '#558f41',
+  grass3: '#447a34',
   grassDark: '#4a7f34',
+  grassLine: '#41742f',
   dirt: '#7a5232',
   dirtDark: '#5e3e25',
   soil: '#3d2818',
