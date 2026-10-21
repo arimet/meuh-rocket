@@ -335,7 +335,9 @@ export class BoardScene {
     if (!level) return
     const m = BOARD_MARGIN / VOXELS_PER_TILE
     const hw = level.width / 2 + m, hh = level.height / 2 + m
+    // fence tops, plus hovering UFOs over the far row so the HUD never covers them
     const corners = [-hw, hw].flatMap(x => [-hh, hh].flatMap(z => [0, 0.45].map(y => new THREE.Vector3(x, y, z))))
+    if (level.ufos.length) corners.push(new THREE.Vector3(-hw + 0.5, UFO_HEIGHT + 0.2, -hh + 0.5), new THREE.Vector3(hw - 0.5, UFO_HEIGHT + 0.2, -hh + 0.5))
     const portrait = this.camera.aspect < 1
     this.camera.fov = portrait ? 42 : 30
     this.camera.updateProjectionMatrix()
