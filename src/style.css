@@ -66,7 +66,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .block.red { --side: var(--barn-side); --hi: var(--barn-hi); background-color: var(--barn); }
 .block.big { font-size: 26px; padding: 16px 34px calc(16px + var(--depth)); --depth: 8px; }
 .block.small { font-size: 15px; padding: 9px 14px calc(9px + var(--depth)); --depth: 5px; }
-.hud-bar, .actions, .hud-extra, .stock { filter: drop-shadow(0 8px 10px #0009); }
+.hud-bar, .actions, .hud-extra, .hud-arrows { filter: drop-shadow(0 8px 10px #0009); }
 
 /* paper notes pinned on the scene */
 .paper {
@@ -164,7 +164,9 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .plate-name { font-size: 22px; font-weight: 700; text-shadow: 0 2px 0 var(--edge); }
 .idea { max-width: 30ch; padding: 8px 12px; font-size: 15px; text-align: left; transform: rotate(-0.8deg); }
 .idea::before { display: none; }
+.hud-arrows { display: flex; align-items: flex-start; gap: 12px; }
 .stock { display: flex; gap: 8px; }
+.hud-arrows .clear { padding-top: 10px; }
 .tag {
   --plank: 46px; --notch: 4px;
   display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px 10px 9px;
@@ -179,6 +181,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.16) rotate(-3deg); } 100% { transform: none; } }
 .hud-extra { justify-self: end; display: flex; gap: 8px; }
 .sound { width: 48px; height: 48px; padding: 0 0 5px; font-size: 22px; --depth: 5px; }
+.hud-extra .menu { height: 48px; padding-top: 0; padding-bottom: 5px; }
 .hud-bar {
   position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; justify-content: center; align-items: flex-end;
   padding: 0 16px max(14px, env(safe-area-inset-bottom)); pointer-events: none;
@@ -228,8 +231,10 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   .crate-name { display: none; }
   .crate-star { font-size: 18px; top: 6px; right: 6px; }
   .hud-top { grid-template-columns: 1fr auto; }
-  .stock { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+  .hud-arrows { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
   .hud-extra { grid-column: 2; grid-row: 1; }
+  .hud-arrows .clear .label, .hud-extra .menu .label { display: none; }
+  .hud-arrows .clear, .hud-extra .menu { width: 44px; height: 44px; padding: 0 0 5px; font-size: 20px; }
 }
 @media (max-height: 460px) {
   .screen { gap: 12px; }
@@ -238,14 +243,15 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
   .block.big { font-size: 20px; padding: 11px 24px calc(11px + var(--depth)); }
   .idea { display: none; }
   .hud-top { padding-top: max(8px, env(safe-area-inset-top)); grid-template-columns: 1fr auto 1fr; }
-  .stock { grid-column: auto; grid-row: auto; }
+  .hud-arrows { grid-column: auto; grid-row: auto; gap: 8px; }
   .hud-extra { grid-column: auto; grid-row: auto; }
+  .hud-arrows .clear .label, .hud-extra .menu .label { display: none; }
+  .hud-arrows .clear, .hud-extra .menu, .sound { width: 40px; height: 40px; padding: 0 0 5px; font-size: 18px; }
   .plate { padding: 5px 12px 8px; }
   .plate-name { font-size: 17px; }
   .tag { padding: 5px 8px 8px 7px; }
   .tag .icon { font-size: 18px; }
   .tag-count { font-size: 14px; }
-  .sound { width: 40px; height: 40px; font-size: 18px; }
   .hud-bar { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
   .launch { min-width: 130px; font-size: 18px; padding: 10px 18px 16px; }
   .crates { grid-template-columns: repeat(10, minmax(0, 1fr)); max-width: 92vw; gap: 6px; }

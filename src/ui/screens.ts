@@ -77,12 +77,19 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
     stock.append(el)
     chips[d] = { el, count, value: -1 }
   }
+  // arrow controls sit together: the stock, and the button that empties the board back into it
+  const clear = button('Retirer les flèches', 'small clear', on.onClear, icon('clear'))
+  clear.setAttribute('aria-label', 'Retirer les flèches')
+  const arrows = h('div', 'hud-arrows')
+  arrows.append(stock, clear)
+  const menu = button('Menu', 'small menu', on.onMenu, icon('menu'))
+  menu.setAttribute('aria-label', 'Menu')
   const extra = h('div', 'hud-extra')
-  top.append(info, stock, extra)
+  extra.append(menu)
+  top.append(info, arrows, extra)
   const bar = h('footer', 'hud-bar')
   const launch = button('Lancer', 'red launch', on.onLaunch, icon('play'))
-  const clear = button('Retirer les flèches', 'small', on.onClear, icon('clear'))
-  bar.append(button('Menu', 'small', on.onMenu, icon('menu')), clear, launch)
+  bar.append(launch)
   hud.append(top, bar)
 
   const victory = h('section', 'screen victory')
