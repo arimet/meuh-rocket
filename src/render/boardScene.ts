@@ -12,6 +12,7 @@ import { VOXELS_PER_TILE } from './voxel'
 const ARROW_YAW: Record<Dir, number> = { N: 0, E: -Math.PI / 2, S: Math.PI, W: Math.PI / 2 }
 const COW_YAW: Record<Dir, number> = { E: 0, N: Math.PI / 2, W: Math.PI, S: -Math.PI / 2 }
 const UFO_HEIGHT = 1.05
+const ABDUCT_BACK = 0.55
 const PITCH = THREE.MathUtils.degToRad(58) // camera elevation above the board
 
 const shadowed = <T extends THREE.Object3D>(o: T) => {
@@ -48,6 +49,14 @@ export class BoardScene {
   private dust: { mesh: THREE.Mesh; vel: THREE.Vector3; born: number }[] = []
   private dustGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06)
   private dustMat = new THREE.MeshStandardMaterial({ color: '#c9a777', roughness: 1 })
+  private glow = new THREE.Mesh(
+    new THREE.RingGeometry(0.18, 0.5, 32).rotateX(-Math.PI / 2),
+    new THREE.MeshBasicMaterial({ color: '#c8ff7a', transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
+  )
+  private sparkles = new THREE.Points(
+    new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(28 * 3), 3)),
+    new THREE.PointsMaterial({ color: '#eaff9a', size: 0.07, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }),
+  )
   private level: Level | null = null
   private cowGeo = cowGeometry()
   private arrowGeo = arrowGeometry()
@@ -105,7 +114,8 @@ export class BoardScene {
     for (const d of this.dust) d.mesh.removeFromParent()
     this.dust = []
     this.hoverCell = this.selectedCell = null
-    this.root.add(this.arrowsGroup, this.cursor)
+    this.sparkles.visible = this.glow.visible = false
+    this.root.add(this.arrowsGroup, this.cursor, this.sparkles, this.glow)
     this.actors = []
     this.beams = []
     for (const _ of level.cows) this.actors.push(shadowed(new THREE.Mesh(this.cowGeo, MATERIALS.lit)))
@@ -228,6 +238,7 @@ export class BoardScene {
     const dt = Math.min(0.1, Math.max(0, time - this.lastTime))
     this.lastTime = time
     const snap = this.yaw.length === 0 || frame.phase === 'placing' || frame.phase === 'rewinding'
+    this.sparkles.visible = this.glow.visible = false
     frame.to.actors.forEach((to, i) => this.place(i, frame.from.actors[i], to, frame, time, dt, snap))
     this.decor?.userData.update?.(time)
     this.animateSelection(time, dt)
@@ -272,13 +283,17 @@ export class BoardScene {
       : Math.abs(to.x - from.x) > 0 ? (to.x > from.x ? 'E' : 'W') : (to.y > from.y ? 'S' : 'N')
     const target = COW_YAW[heading] // while rewinding cows slide backwards, like a tape
 
+    const abduction = frame.cause?.type === 'abducted' ? frame.cause : null
+
     if (to.kind === 'ufo') {
       o.position.y = UFO_HEIGHT + Math.sin(time * 2 + i) * 0.05
       o.rotation.y = time * 0.7 + i
       const beam = this.beams[i - level.cows.length]
-      const abducting = frame.highlight !== null && frame.to.actors[frame.highlight]?.status === 'lost'
-      ;(beam.material as THREE.MeshBasicMaterial).opacity = abducting ? 0.32 : 0.14 + Math.sin(time * 3 + i) * 0.03
-      if (to.status === 'lost') {
+      const beamMat = beam.material as THREE.MeshBasicMaterial
+      beamMat.opacity = 0.14 + Math.sin(time * 3 + i) * 0.03
+      beam.scale.set(1, UFO_HEIGHT, 1)
+      if (abduction?.by === i) this.abductUfo(o, beam, frame.to.actors[abduction.actor], frame.causeT, time)
+      else if (to.status === 'lost') {
         if (from.status === 'active') { o.position.y -= a * 1.2; o.scale.setScalar(1 - a * 0.8) }
         else o.visible = frame.phase === 'cause' && frame.highlight === i && Math.floor(time * 6) % 2 === 0
       }
@@ -293,13 +308,63 @@ export class BoardScene {
       o.visible = from.status === 'active'
       o.scale.setScalar(1 - a)
     } else if (to.status === 'lost') {
-      const blink = frame.highlight === i ? Math.floor(time * 6) % 2 === 0 : true
       const hole = level.cells[Math.round(to.y / TILE) * level.width + Math.round(to.x / TILE)] === 'hole'
+      if (!hole) {
+        // abducted: stays put until the cause phase plays the abduction
+        o.visible = frame.phase === 'running' || (abduction?.actor === i && this.abductCow(o, frame.causeT, time, i))
+        return
+      }
+      const blink = frame.highlight === i ? Math.floor(time * 6) % 2 === 0 : true
       const k = from.status === 'active' ? a : 1
-      if (hole) { o.position.y = -0.45 * k; o.scale.setScalar(1 - 0.3 * k) }
-      else { o.position.y = 0.6 * k; o.rotation.z = 0.5 * k; o.scale.setScalar(1 - 0.25 * k) }
+      o.position.y = -0.45 * k
+      o.scale.setScalar(1 - 0.3 * k)
       o.visible = blink && (frame.phase === 'cause' || frame.phase === 'running')
     }
+  }
+
+  // The UFO glides over its victim, widens and pulses its beam, then hops once the cow is aboard.
+  private abductUfo(o: THREE.Object3D, beam: THREE.Mesh, cow: Actor, t: number, time: number) {
+    const level = this.level!
+    // hover slightly behind the cow (away from the camera) so its rise stays in view
+    const target = tileCenter(level, cow.x / TILE, cow.y / TILE).add(new THREE.Vector3(0, 0, -ABDUCT_BACK))
+    const glide = easeOut(Math.min(1, t / 0.2))
+    o.position.x += (target.x - o.position.x) * glide
+    o.position.z += (target.z - o.position.z) * glide
+    const hop = t > 0.82 ? Math.sin(((t - 0.82) / 0.18) * Math.PI) * 0.28 : 0
+    o.position.y = UFO_HEIGHT + hop
+    o.rotation.y = time * (t > 0.82 ? 6 : 1.6)
+    const on = t < 0.12 ? t / 0.12 : t > 0.86 ? Math.max(0, 1 - (t - 0.86) / 0.1) : 1
+    const mat = beam.material as THREE.MeshBasicMaterial
+    mat.opacity = 0.14 + on * (0.42 + Math.sin(time * 18) * 0.08) + (t > 0.78 && t < 0.86 ? 0.4 : 0)
+    beam.scale.set(1 + on * 0.45, UFO_HEIGHT + hop, 1 + on * 0.45)
+    this.sparkles.visible = on > 0
+    this.sparkles.position.set(o.position.x, 0, o.position.z)
+    this.glow.visible = on > 0
+    this.glow.position.set(o.position.x, 0.015, o.position.z + ABDUCT_BACK * 0.5)
+    this.glow.scale.setScalar(0.8 + on * 0.4 + Math.sin(time * 12) * 0.05)
+    ;(this.glow.material as THREE.MeshBasicMaterial).opacity = on * 0.55
+    const pos = this.sparkles.geometry.attributes.position as THREE.BufferAttribute
+    for (let k = 0; k < pos.count; k++) {
+      const h = ((time * 0.7 + k / pos.count) % 1)
+      const r = 0.12 + 0.22 * (1 - h)
+      pos.setXYZ(k, Math.cos(k * 2.4 + time * 3) * r, h * UFO_HEIGHT, Math.sin(k * 2.4 + time * 3) * r)
+    }
+    pos.needsUpdate = true
+  }
+
+  // The cow jolts, floats up the beam spinning and swaying, shrinks into the saucer. Returns visibility.
+  private abductCow(o: THREE.Object3D, t: number, time: number, i: number): boolean {
+    if (t >= 0.86) return false
+    const jolt = t < 0.15 ? Math.sin((t / 0.15) * Math.PI) * 0.12 : 0
+    const p = Math.max(0, Math.min(1, (t - 0.15) / 0.65))
+    const rise = p * p * (3 - 2 * p)
+    o.position.y = jolt + rise * (UFO_HEIGHT - 0.3)
+    o.position.z -= ABDUCT_BACK * rise * rise // drift into the saucer late, so the climb stays in view
+    this.yaw[i] += 0.06 + rise * 0.12
+    o.rotation.set(Math.sin(time * 7) * 0.25 * rise, this.yaw[i], Math.sin(time * 9 + 1) * 0.35 * rise + (t < 0.15 ? Math.sin(time * 60) * 0.08 : 0))
+    const shrink = t > 0.74 ? 1 - (t - 0.74) / 0.12 : 1
+    o.scale.setScalar((1 - rise * 0.35) * shrink)
+    return true
   }
 
   cellAt(clientX: number, clientY: number): number | null {

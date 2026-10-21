@@ -142,11 +142,25 @@ screens.showTitle()
 const direct = Number(new URLSearchParams(location.search).get('level'))
 if (import.meta.env.DEV && LEVELS.some(l => l.id === direct)) startLevel(direct)
 
+const dev = { timeScale: 1 } // dev-only slow motion, for checking animations
 let prev = performance.now()
+let clock = 0
 scene.renderer.setAnimationLoop(now => {
-  const frame = game.update(Math.min(0.1, (now - prev) / 1000))
+  const dt = Math.min(0.1, (now - prev) / 1000) * dev.timeScale
   prev = now
-  scene.render(frame, now / 1000)
+  clock += dt
+  scene.render(game.update(dt), clock)
 })
 
-if (import.meta.env.DEV) Object.assign(window, { __mr: { scene, get game() { return game } } })
+if (import.meta.env.DEV) {
+  Object.assign(window, { __mr: { scene, dev, get game() { return game } } })
+  // ?level=5&demo=cause&t=0.5 freezes the failure scene at that point, for screenshots
+  const q = new URLSearchParams(location.search)
+  if (q.get('demo') === 'cause' && game.launch()) {
+    let f = game.update(0)
+    while (f.phase === 'running') f = game.update(1 / 60)
+    const t = Number(q.get('t') ?? 0.5)
+    for (let k = 0; k < 200 && f.phase === 'cause' && f.causeT < t; k++) f = game.update(1 / 120)
+    dev.timeScale = 0
+  }
+}

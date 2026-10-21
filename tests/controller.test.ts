@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { CAUSE_SECONDS, GameController, REWIND_SECONDS, type Phase } from '../src/game/controller'
+import { ABDUCT_SECONDS, CAUSE_SECONDS, GameController, REWIND_SECONDS, type Phase } from '../src/game/controller'
 import type { Dir } from '../src/sim/types'
 import { lvl } from './helpers'
 
@@ -142,5 +142,36 @@ describe('GameController', () => {
     const types = onEvent.mock.calls.map(([e]) => e.type)
     expect(types.filter(t => t === 'saved')).toHaveLength(1)
     expect(types.filter(t => t === 'arrow')).toHaveLength(1)
+  })
+
+  it('an abduction is shown longer, with its progress and cause exposed to the renderer', () => {
+    const c = new GameController(lvl(['+-+-+-+-+-+-+', '|. . . . . .|', '+-+-+-+-+-+-+'], { cows: [[0, 0, 'E']], ufos: [[5, 0, 'W']] }))
+    c.launch()
+    let f = c.update(0)
+    while (f.phase === 'running') f = c.update(0.02)
+    expect(f.phase).toBe('cause')
+    expect(f.cause?.type).toBe('abducted')
+    expect(f.cause?.by).toBe(1)
+    let t = 0, last = -1
+    while (f.phase === 'cause') {
+      expect(f.causeT).toBeGreaterThanOrEqual(last)
+      expect(f.causeT).toBeLessThanOrEqual(1)
+      last = f.causeT
+      f = c.update(0.02)
+      t += 0.02
+    }
+    expect(Math.abs(t - ABDUCT_SECONDS)).toBeLessThan(0.05)
+    expect(ABDUCT_SECONDS).toBeGreaterThan(CAUSE_SECONDS)
+    expect(f.phase).toBe('rewinding')
+  })
+
+  it('a fall keeps the short cause', () => {
+    const c = new GameController(lvl(['+-+-+-+', '|. O R|', '+-+-+-+'], { cows: [[0, 0, 'E']] }))
+    c.launch()
+    let f = c.update(0)
+    while (f.phase === 'running') f = c.update(0.02)
+    let t = 0
+    while (f.phase === 'cause') { f = c.update(0.02); t += 0.02 }
+    expect(Math.abs(t - CAUSE_SECONDS)).toBeLessThan(0.05)
   })
 })

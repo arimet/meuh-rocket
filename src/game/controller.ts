@@ -11,6 +11,8 @@ export interface Frame {
   alpha: number
   phase: Phase
   highlight: number | null // actor index to blink
+  cause: SimEvent | null // set while showing a failure
+  causeT: number // 0..1 progress through the cause phase
 }
 
 export interface ControllerHooks {
@@ -20,6 +22,7 @@ export interface ControllerHooks {
 }
 
 export const CAUSE_SECONDS = 0.8
+export const ABDUCT_SECONDS = 1.8 // the abduction plays out as its own little scene
 export const REWIND_SECONDS = 1.5
 
 // Plays a precomputed run forward, then on failure shows the cause and rewinds it.
@@ -96,7 +99,7 @@ export class GameController {
       } else this.enter('cause')
     }
 
-    if (this.phase === 'cause' && this.clock >= CAUSE_SECONDS) this.enter('rewinding')
+    if (this.phase === 'cause' && this.clock >= this.causeSeconds()) this.enter('rewinding')
 
     if (this.phase === 'rewinding') {
       const p = this.clock / REWIND_SECONDS
@@ -112,10 +115,17 @@ export class GameController {
     return this.frame(h[last], h[last], 0)
   }
 
+  private causeSeconds() {
+    const r = this.result
+    return r?.outcome.result === 'failed' && r.outcome.cause.type === 'abducted' ? ABDUCT_SECONDS : CAUSE_SECONDS
+  }
+
   private frame(from: SimState, to: SimState, alpha: number): Frame {
     const r = this.result
-    const cause = r && r.outcome.result === 'failed' && r.outcome.cause.type !== 'loop' ? r.outcome.cause.actor : null
-    return { from, to, alpha, phase: this.phase, highlight: this.phase === 'cause' ? cause : null }
+    const failure = this.phase === 'cause' && r?.outcome.result === 'failed' ? r.outcome.cause : null
+    const highlight = failure && failure.type !== 'loop' ? failure.actor : null
+    const causeT = failure ? Math.min(1, this.clock / this.causeSeconds()) : 0
+    return { from, to, alpha, phase: this.phase, highlight, cause: failure, causeT }
   }
 
   private enter(p: Phase) {
