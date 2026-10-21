@@ -59,13 +59,23 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
 
   const hud = h('section', 'hud')
   const top = h('header', 'hud-top')
-  const plate = h('div', 'plate')
+  const plate = h('button', 'plate')
+  plate.setAttribute('aria-label', 'Afficher la consigne')
   const plateNum = h('span', 'plate-num')
   const plateName = h('span', 'plate-name')
   plate.append(plateNum, plateName)
   const idea = h('p', 'paper idea')
   const info = h('div', 'hud-info')
   info.append(plate, idea)
+  // the hint folds into the plate after a while (it would hide the board's corner); tap the plate to see it again
+  let foldTimer = 0
+  const showIdea = (open: boolean) => {
+    clearTimeout(foldTimer)
+    idea.classList.toggle('open', open)
+    plate.setAttribute('aria-expanded', String(open))
+    if (open) foldTimer = window.setTimeout(() => showIdea(false), 6000)
+  }
+  plate.addEventListener('click', () => showIdea(!idea.classList.contains('open')))
   const stock = h('div', 'stock')
   stock.setAttribute('aria-label', 'Flèches restantes')
   const chips = {} as Record<Dir, { el: HTMLElement; count: HTMLElement; value: number }>
@@ -130,7 +140,9 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
       idea.textContent = level.idea
       for (const c of Object.values(chips)) c.value = -1
       only(hud)
+      showIdea(true)
     },
+    foldIdea: () => showIdea(false),
     updateHud(s: { remaining: Record<Dir, number>; running: boolean; busy: boolean }) {
       for (const d of ['N', 'E', 'S', 'W'] as Dir[]) {
         const c = chips[d], n = s.remaining[d]

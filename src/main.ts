@@ -58,7 +58,7 @@ function backdrop() {
 const screens = createScreens(ui, {
   onPlay: () => { backdrop(); screens.showSelect(LEVELS, progress) },
   onSelect: id => startLevel(id),
-  onLaunch: () => { closePicker(); if (game.launch()) sfx.moo(); else game.stop() },
+  onLaunch: () => { closePicker(); screens.foldIdea(); if (game.launch()) sfx.moo(); else game.stop() },
   onClear: () => { game.clear(); scene.setArrows(game.arrows); refreshHud() },
   onMenu: () => { backdrop(); screens.showSelect(LEVELS, progress) },
   onNext: () => startLevel(level.id + 1),
@@ -88,6 +88,7 @@ canvas.addEventListener('pointerdown', e => {
   const enabled = placeable(cell)
   if (!DIRS.some(d => enabled[d] > 0)) return
   target = cell
+  screens.foldIdea()
   const p = scene.cellToScreen(cell)
   picker.open(p.x, p.y, enabled)
   scene.setSelected(cell)
