@@ -41,6 +41,12 @@ export class BoardScene {
   private rocketGeo = rocketGeometry()
   private raycaster = new THREE.Raycaster()
   private lastTime = 0
+  private rockets: THREE.Mesh[] = []
+  private launchAt: number | null = null
+  private flame = new THREE.Mesh(
+    new THREE.ConeGeometry(0.16, 0.6, 12).rotateX(Math.PI).translate(0, -0.25, 0),
+    new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
+  )
 
   constructor(private canvas: HTMLCanvasElement) {
     const stage = createStage(canvas)
@@ -61,11 +67,14 @@ export class BoardScene {
     this.root.add(shadowed(new THREE.Mesh(boardGeometry(level), MATERIALS.lit)))
     this.decor = farmDecor(level)
     this.root.add(this.decor)
+    this.rockets = []
+    this.launchAt = null
     level.cells.forEach((kind, i) => {
       if (kind !== 'rocket') return
       const r = shadowed(new THREE.Mesh(this.rocketGeo, MATERIALS.lit))
       r.position.copy(tileCenter(level, i % level.width, Math.floor(i / level.width)))
-      r.userData.rocket = true
+      r.userData.base = r.position.clone()
+      this.rockets.push(r)
       this.root.add(r)
     })
     this.arrowsGroup.clear()
@@ -114,7 +123,31 @@ export class BoardScene {
     const snap = this.yaw.length === 0 || frame.phase === 'placing' || frame.phase === 'rewinding'
     frame.to.actors.forEach((to, i) => this.place(i, frame.from.actors[i], to, frame, time, dt, snap))
     this.decor?.userData.update?.(time)
+    this.animateLaunch(time)
     this.renderer.render(this.scene, this.camera)
+  }
+
+  // Rockets lift off with the saved cows; resolves once they are out of frame.
+  launchRocket(): Promise<void> {
+    this.launchAt = this.lastTime
+    return new Promise(resolve => setTimeout(resolve, 1600))
+  }
+
+  private animateLaunch(time: number) {
+    if (this.launchAt === null) {
+      this.flame.removeFromParent()
+      for (const r of this.rockets) r.position.y = 0
+      return
+    }
+    const t = Math.max(0, time - this.launchAt)
+    const shake = t < 0.35 ? Math.sin(t * 90) * 0.02 : 0
+    const rise = t < 0.35 ? 0 : (t - 0.35) ** 2 * 5
+    this.rockets.forEach((r, k) => {
+      const base = r.userData.base as THREE.Vector3
+      r.position.set(base.x + shake, rise, base.z)
+      if (k === 0 && !this.flame.parent) r.add(this.flame)
+    })
+    this.flame.scale.set(1, 0.8 + Math.random() * 0.5 + Math.min(2, t * 2), 1)
   }
 
   private place(i: number, from: Actor, to: Actor, frame: Frame, time: number, dt: number, snap: boolean) {
