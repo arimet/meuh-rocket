@@ -1,4 +1,5 @@
 import type { Dir } from '../sim/types'
+import { icon } from './icons'
 
 export function clampToViewport(x: number, y: number, size: number, vw: number, vh: number, margin: number) {
   const half = size / 2 + margin
@@ -6,7 +7,6 @@ export function clampToViewport(x: number, y: number, size: number, vw: number, 
   return { x: clamp(x, vw), y: clamp(y, vh) }
 }
 
-const GLYPH: Record<Dir, string> = { N: '↑', E: '→', S: '↓', W: '←' }
 const LABEL: Record<Dir, string> = { N: 'Flèche vers le haut', E: 'Flèche vers la droite', S: 'Flèche vers le bas', W: 'Flèche vers la gauche' }
 export const PICKER_SIZE = 156
 
@@ -18,9 +18,9 @@ export function createPicker(root: HTMLElement, onPick: (dir: Dir) => void) {
   const buttons = {} as Record<Dir, HTMLButtonElement>
   for (const d of ['N', 'E', 'S', 'W'] as Dir[]) {
     const b = document.createElement('button')
-    b.className = `picker-${d}`
+    b.className = `block picker-${d}`
     b.setAttribute('aria-label', LABEL[d])
-    b.innerHTML = `<span class="glyph">${GLYPH[d]}</span><span class="count"></span>`
+    b.innerHTML = `${icon('arrow', `dir-${d}`)}<span class="count"></span>`
     b.addEventListener('pointerdown', e => e.stopPropagation())
     b.addEventListener('click', e => { e.stopPropagation(); if (!b.disabled) onPick(d) })
     buttons[d] = b
@@ -29,18 +29,32 @@ export function createPicker(root: HTMLElement, onPick: (dir: Dir) => void) {
   el.addEventListener('pointerdown', e => e.stopPropagation())
   root.append(el)
 
+  let hideTimer = 0
   return {
+    // (x, y) is the tile centre; the picker may be pushed inward, but its blocks still fly out from the tile.
     open(x: number, y: number, enabled: Record<Dir, number>) {
       const p = clampToViewport(x, y, PICKER_SIZE, innerWidth, innerHeight, 8)
+      clearTimeout(hideTimer)
       el.style.left = `${p.x}px`
       el.style.top = `${p.y}px`
+      el.style.setProperty('--ox', `${x - p.x}px`)
+      el.style.setProperty('--oy', `${y - p.y}px`)
       for (const d of Object.keys(buttons) as Dir[]) {
         buttons[d].disabled = enabled[d] <= 0
         buttons[d].querySelector('.count')!.textContent = String(Math.max(0, enabled[d]))
       }
       el.hidden = false
+      el.classList.remove('closing')
+      el.classList.remove('opening')
+      void el.offsetWidth
+      el.classList.add('opening')
+      ;(Object.values(buttons).find(b => !b.disabled))?.focus({ preventScroll: true })
     },
-    close() { el.hidden = true },
-    get isOpen() { return !el.hidden },
+    close() {
+      if (el.hidden || el.classList.contains('closing')) return
+      el.classList.add('closing')
+      hideTimer = window.setTimeout(() => { el.hidden = true; el.classList.remove('closing') }, 120)
+    },
+    get isOpen() { return !el.hidden && !el.classList.contains('closing') },
   }
 }

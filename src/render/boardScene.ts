@@ -19,6 +19,9 @@ const shadowed = <T extends THREE.Object3D>(o: T) => {
   return o
 }
 
+const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+const easeOut = (p: number) => 1 - (1 - p) ** 3
+
 const lerpAngle = (a: number, b: number, t: number) => {
   const d = Math.atan2(Math.sin(b - a), Math.cos(b - a))
   return a + d * t
@@ -34,7 +37,17 @@ export class BoardScene {
   private beams: THREE.Mesh[] = []
   private yaw: number[] = []
   private decor: THREE.Group | null = null
-  private hover: THREE.Mesh
+  private cursor = new THREE.Group()
+  private cursorFill: THREE.Mesh
+  private cursorMat = new THREE.MeshBasicMaterial({ color: '#fff3d0', toneMapped: false })
+  private hoverCell: number | null = null
+  private selectedCell: number | null = null
+  private selectedAt = -1
+  private arrowMeshes = new Map<number, THREE.Mesh>()
+  private dying: THREE.Mesh[] = []
+  private dust: { mesh: THREE.Mesh; vel: THREE.Vector3; born: number }[] = []
+  private dustGeo = new THREE.BoxGeometry(0.06, 0.06, 0.06)
+  private dustMat = new THREE.MeshStandardMaterial({ color: '#c9a777', roughness: 1 })
   private level: Level | null = null
   private cowGeo = cowGeometry()
   private arrowGeo = arrowGeometry()
@@ -53,12 +66,21 @@ export class BoardScene {
     this.renderer = stage.renderer
     this.scene = stage.scene
     this.scene.add(this.root)
-    this.hover = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.94, 0.94).rotateX(-Math.PI / 2),
-      new THREE.MeshBasicMaterial({ color: '#fff6c8', transparent: true, opacity: 0.22, depthWrite: false }),
+    // selection cursor: four voxel corner brackets over a soft fill
+    this.cursorFill = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: '#fff3d0', transparent: true, opacity: 0.16, depthWrite: false }),
     )
-    this.hover.position.y = 0.01
-    this.hover.visible = false
+    this.cursorFill.position.y = 0.01
+    this.cursor.add(this.cursorFill)
+    const bar = (w: number, d: number) => new THREE.Mesh(new THREE.BoxGeometry(w, 0.05, d), this.cursorMat)
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const a = bar(0.2, 0.06), b = bar(0.06, 0.2)
+      a.position.set(sx * 0.4, 0.04, sz * 0.45)
+      b.position.set(sx * 0.45, 0.04, sz * 0.4)
+      this.cursor.add(a, b)
+    }
+    this.cursor.visible = false
   }
 
   loadLevel(level: Level): void {
@@ -78,7 +100,12 @@ export class BoardScene {
       this.root.add(r)
     })
     this.arrowsGroup.clear()
-    this.root.add(this.arrowsGroup, this.hover)
+    this.arrowMeshes.clear()
+    this.dying = []
+    for (const d of this.dust) d.mesh.removeFromParent()
+    this.dust = []
+    this.hoverCell = this.selectedCell = null
+    this.root.add(this.arrowsGroup, this.cursor)
     this.actors = []
     this.beams = []
     for (const _ of level.cows) this.actors.push(shadowed(new THREE.Mesh(this.cowGeo, MATERIALS.lit)))
@@ -97,22 +124,102 @@ export class BoardScene {
     this.resize()
   }
 
+  // Arrows drop in when placed and hop away when removed.
   setArrows(arrows: Arrows): void {
     const level = this.level
     if (!level) return
-    this.arrowsGroup.clear()
+    for (const [cell, m] of this.arrowMeshes) {
+      if (arrows.get(cell) === m.userData.dir) continue
+      m.userData.dying = this.lastTime
+      this.dying.push(m)
+      this.arrowMeshes.delete(cell)
+    }
     for (const [cell, dir] of arrows) {
+      if (this.arrowMeshes.has(cell)) continue
       const m = shadowed(new THREE.Mesh(this.arrowGeo, MATERIALS.lit))
-      m.position.copy(tileCenter(level, cell % level.width, Math.floor(cell / level.width)))
+      m.position.copy(this.cellCenter(cell))
       m.rotation.y = ARROW_YAW[dir]
+      m.userData = { dir, born: this.lastTime, landed: false }
+      this.arrowMeshes.set(cell, m)
       this.arrowsGroup.add(m)
     }
   }
 
   setHover(cell: number | null): void {
-    const level = this.level
-    this.hover.visible = cell !== null && !!level
-    if (cell !== null && level) this.hover.position.copy(tileCenter(level, cell % level.width, Math.floor(cell / level.width))).setY(0.012)
+    this.hoverCell = cell
+  }
+
+  // The tile whose picker is open: the cursor locks onto it and turns hay yellow.
+  setSelected(cell: number | null): void {
+    if (cell !== null && cell !== this.selectedCell) this.selectedAt = this.lastTime
+    this.selectedCell = cell
+  }
+
+  private cellCenter(cell: number) {
+    const level = this.level!
+    return tileCenter(level, cell % level.width, Math.floor(cell / level.width))
+  }
+
+  private animateSelection(time: number, dt: number) {
+    const target = this.selectedCell ?? this.hoverCell
+    if (target === null) { this.cursor.visible = false; return }
+    const goal = this.cellCenter(target)
+    const jump = !this.cursor.visible || this.cursor.position.distanceTo(goal) > 4
+    this.cursor.visible = true
+    if (jump || REDUCED_MOTION) this.cursor.position.copy(goal)
+    else this.cursor.position.lerp(goal, 1 - Math.exp(-dt * 22))
+    const selected = this.selectedCell !== null
+    this.cursorMat.color.set(selected ? '#ffd24a' : '#fff3d0')
+    ;(this.cursorFill.material as THREE.MeshBasicMaterial).opacity = selected ? 0.3 : 0.14
+    const since = time - this.selectedAt
+    const snapIn = selected && since < 0.22 ? 1.25 - 0.25 * easeOut(since / 0.22) : 1
+    const breathe = REDUCED_MOTION ? 1 : 1 + Math.sin(time * (selected ? 9 : 4)) * (selected ? 0.025 : 0.035)
+    this.cursor.scale.set(snapIn * breathe, 1, snapIn * breathe)
+    this.cursor.position.y = REDUCED_MOTION ? 0 : 0.01 + Math.sin(time * 4) * 0.012
+  }
+
+  private animateArrows(time: number, dt: number) {
+    const DROP = 0.22, SQUASH = 0.16
+    for (const m of this.arrowMeshes.values()) {
+      const t = time - m.userData.born
+      if (REDUCED_MOTION || t >= DROP + SQUASH) { m.position.y = 0; m.scale.set(1, 1, 1); continue }
+      if (t < DROP) {
+        const p = t / DROP
+        m.position.y = 0.6 * (1 - p * p)
+        m.scale.setScalar(0.8 + 0.2 * p)
+      } else {
+        if (!m.userData.landed) { m.userData.landed = true; this.puff(m.position, time) }
+        const p = (t - DROP) / SQUASH
+        m.position.y = 0
+        m.scale.set(1 + 0.18 * (1 - p), 1 - 0.45 * (1 - p), 1 + 0.18 * (1 - p))
+      }
+    }
+    this.dying = this.dying.filter(m => {
+      const p = (time - m.userData.dying) / 0.16
+      if (p >= 1 || REDUCED_MOTION) { m.removeFromParent(); return false }
+      m.position.y = 0.3 * p
+      m.scale.setScalar(1 - p)
+      m.rotation.y += dt * 12
+      return true
+    })
+    this.dust = this.dust.filter(d => {
+      const p = (time - d.born) / 0.45
+      if (p >= 1) { d.mesh.removeFromParent(); return false }
+      d.mesh.position.addScaledVector(d.vel, dt)
+      d.vel.y -= dt * 2.5
+      d.mesh.scale.setScalar(1 - p)
+      return true
+    })
+  }
+
+  private puff(at: THREE.Vector3, time: number) {
+    for (let k = 0; k < 10; k++) {
+      const a = (k / 10) * Math.PI * 2 + Math.random() * 0.4
+      const mesh = new THREE.Mesh(this.dustGeo, this.dustMat)
+      mesh.position.set(at.x + Math.cos(a) * 0.25, 0.04, at.z + Math.sin(a) * 0.25)
+      this.root.add(mesh)
+      this.dust.push({ mesh, vel: new THREE.Vector3(Math.cos(a) * 1.1, 0.9 + Math.random() * 0.5, Math.sin(a) * 1.1), born: time })
+    }
   }
 
   render(frame: Frame, time: number): void {
@@ -123,6 +230,8 @@ export class BoardScene {
     const snap = this.yaw.length === 0 || frame.phase === 'placing' || frame.phase === 'rewinding'
     frame.to.actors.forEach((to, i) => this.place(i, frame.from.actors[i], to, frame, time, dt, snap))
     this.decor?.userData.update?.(time)
+    this.animateSelection(time, dt)
+    this.animateArrows(time, dt)
     this.animateLaunch(time)
     this.renderer.render(this.scene, this.camera)
   }
