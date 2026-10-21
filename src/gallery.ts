@@ -40,7 +40,8 @@ const makeUfo = createUfo
 
 // --- board view
 const boardView = new THREE.Group()
-boardView.add(shadowed(new THREE.Mesh(boardGeometry(level), lit)), farmDecor(level))
+const decor = farmDecor(level)
+boardView.add(shadowed(new THREE.Mesh(boardGeometry(level), lit)), decor)
 const cowGeo = cowGeometry(), arrowGeo = arrowGeometry()
 const at = (o: THREE.Object3D, x: number, y: number, rot = 0) => {
   o.position.copy(tileCenter(level, x, y))
@@ -73,6 +74,7 @@ place(shadowed(new THREE.Mesh(arrowGeo, lit)), 0.9, 1.3)
 modelsView.add(turntable)
 
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 200)
+const zoom = new URLSearchParams(location.search).get('cam') === 'wide' ? 1.55 : 1
 let view: 'board' | 'models' = new URLSearchParams(location.search).get('view') === 'models' ? 'models' : 'board'
 const show = () => {
   scene.remove(boardView, modelsView)
@@ -93,9 +95,10 @@ resize()
 renderer.setAnimationLoop(t => {
   const s = t / 1000
   if (view === 'board') {
+    decor.userData.update(s)
     const a = Math.sin(s * 0.25) * 0.25
-    camera.position.set(Math.sin(a) * 13, 14, Math.cos(a) * 13)
-    camera.lookAt(0, -0.5, 0.6)
+    camera.position.set(Math.sin(a) * 13 * zoom, 14 * zoom, Math.cos(a) * 13 * zoom)
+    camera.lookAt(0, -0.5, zoom > 1 ? -0.6 : 0.6)
     boardUfo.position.y = 1.15 + Math.sin(s * 2) * 0.04
     boardUfo.rotation.y = s * 0.6
   } else {

@@ -319,23 +319,36 @@ function tree(seed: number): THREE.BufferGeometry {
   return mesh(g, { voxelSize: 1 / 10, jitter: 0.06 })
 }
 
-function barn(): THREE.BufferGeometry {
-  const g = new VoxelGrid(26, 26, 20)
-  g.box(0, 0, 0, 25, 13, 19, C('barnRed'))
-  // gable roof
-  for (let k = 0; k <= 11; k++) {
-    g.box(k - 1 < 0 ? 0 : k - 1, 14 + k, 0, Math.min(25, 26 - k), 14 + k, 19, C('barnRoof'))
-    g.box(k + 1, 14 + k, 1, 24 - k, 14 + k, 18, C('barnRed'))
+function barn(): { body: THREE.BufferGeometry; glow: THREE.BufferGeometry } {
+  const g = new VoxelGrid(28, 28, 22)
+  const glow = new VoxelGrid(28, 28, 22)
+  g.box(1, 0, 1, 26, 14, 20, C('barnRed'))
+  // vertical planks
+  for (let x = 1; x <= 26; x += 3) g.box(x, 0, 20, x, 14, 20, C('rocketRedDark'))
+  // white corner trims
+  for (const x of [1, 26]) for (const z of [1, 20]) g.box(x, 0, z, x, 14, z, C('rocketWhite'))
+  // gable roof with overhang
+  for (let k = 0; k <= 12; k++) {
+    g.box(Math.max(0, k - 1), 15 + k, 0, Math.min(27, 28 - k), 15 + k, 21, C('barnRoof'))
+    if (k < 12) g.box(k + 1, 15 + k, 1, 26 - k, 15 + k, 20, C('barnRed'))
   }
-  // big doors with white X on the +z face
-  g.box(8, 0, 19, 17, 10, 19, C('woodDark'))
-  for (let k = 0; k <= 9; k++) {
-    g.set(8 + k, k + 1, 19, C('rocketWhite'))
-    g.set(17 - k, k + 1, 19, C('rocketWhite'))
-  }
-  g.box(8, 11, 19, 17, 11, 19, C('rocketWhite'))
-  g.box(11, 16, 19, 14, 19, 19, C('ufoLight'))
-  return mesh(g, { voxelSize: 1 / 6, jitter: 0.05 })
+  // big doors with white X, facing +z
+  g.box(9, 0, 21, 18, 10, 21, C('woodDark'))
+  for (let k = 0; k <= 9; k++) { g.set(9 + k, k + 1, 21, C('rocketWhite')); g.set(18 - k, k + 1, 21, C('rocketWhite')) }
+  g.box(9, 11, 21, 18, 11, 21, C('rocketWhite'))
+  // lit hayloft and side windows
+  glow.box(12, 17, 21, 15, 20, 21, C('windowGlow'))
+  glow.box(3, 6, 21, 5, 8, 21, C('windowGlow'))
+  glow.box(22, 6, 21, 24, 8, 21, C('windowGlow'))
+  return { body: mesh(g, { voxelSize: 1 / 8, jitter: 0.05 }), glow: mesh(glow, { voxelSize: 1 / 8 }) }
+}
+
+function silo(): THREE.BufferGeometry {
+  const g = new VoxelGrid(16, 44, 16)
+  for (let y = 0; y <= 34; y++) disk(g, 7.5, y, 7.5, 6.8, y % 6 === 0 ? C('siloDark') : C('silo'))
+  for (let y = 35; y <= 41; y++) disk(g, 7.5, y, 7.5, Math.sqrt(Math.max(0, 7 ** 2 - (y - 34) ** 2)), C('metalDark'))
+  g.box(7, 42, 7, 8, 43, 8, C('metalDark'))
+  return mesh(g, { voxelSize: 1 / 8, jitter: 0.04 })
 }
 
 function outerFence(length: number): THREE.BufferGeometry {
@@ -344,59 +357,208 @@ function outerFence(length: number): THREE.BufferGeometry {
     if (x % 12 === 0) g.box(x, 0, 0, x + 1, 7, 1, C('woodDark'))
     else { g.box(x, 3, 0, x, 3, 0, C('wood')); g.box(x, 6, 0, x, 6, 0, C('wood')) }
   }
-  return mesh(g, { voxelSize: 1 / V, anchor: 'corner' })
+  return mesh(g, { voxelSize: 1 / V, anchor: 'corner', jitter: 0.06 })
 }
 
-// Night farm around the board. Kept outside the playing field so the grid stays readable.
+function tuft(): THREE.BufferGeometry {
+  const g = new VoxelGrid(7, 7, 7)
+  const blades: [number, number, number, ColorName][] = [
+    [3, 3, 6, 'tuft1'], [1, 2, 4, 'tuft2'], [5, 2, 5, 'tuft3'], [2, 5, 5, 'tuft1'], [4, 5, 3, 'tuft2'], [5, 4, 4, 'tuft3'], [1, 4, 3, 'tuft3'],
+  ]
+  for (const [x, z, h, c] of blades) for (let y = 0; y < h; y++) g.set(x, y, z, C(c))
+  return mesh(g, { voxelSize: 1 / V, jitter: 0.08 })
+}
+
+function flower(): THREE.BufferGeometry {
+  const g = new VoxelGrid(3, 5, 3)
+  for (let y = 0; y < 3; y++) g.set(1, y, 1, C('tuft2'))
+  g.box(0, 3, 1, 2, 3, 1, C('petal')); g.box(1, 3, 0, 1, 3, 2, C('petal')); g.set(1, 4, 1, C('petal'))
+  return mesh(g, { voxelSize: 1 / V })
+}
+
+function rock(): THREE.BufferGeometry {
+  const g = new VoxelGrid(7, 4, 6)
+  blob(g, 3, 1, 2.5, 3.2, 2.4, 2.6, C('rock'), 2)
+  paint(g, 4, 3, 2, 2, 1, 2, C('rockDark'))
+  return mesh(g, { voxelSize: 1 / V, jitter: 0.08 })
+}
+
+function bush(seed: number): THREE.BufferGeometry {
+  const g = new VoxelGrid(12, 9, 12)
+  for (let y = 0; y < 9; y++) for (let z = 0; z < 12; z++) for (let x = 0; x < 12; x++)
+    if ((x - 5.5) ** 2 + ((y - 2) * 1.3) ** 2 + (z - 5.5) ** 2 <= 30 && hash(x, y, z + seed) > 0.1)
+      g.set(x, y, z, hash(x, y, z + seed) < 0.35 ? C('leafDark') : C('leaf'))
+  return mesh(g, { voxelSize: 1 / V, jitter: 0.06 })
+}
+
+// Smooth value noise in [0, 1).
+function vnoise(x: number, z: number, scale: number, seed: number) {
+  const gx = x / scale, gz = z / scale
+  const x0 = Math.floor(gx), z0 = Math.floor(gz)
+  const fx = gx - x0, fz = gz - z0
+  const sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz)
+  const a = hash(x0, z0, seed), b = hash(x0 + 1, z0, seed), c = hash(x0, z0 + 1, seed), d = hash(x0 + 1, z0 + 1, seed)
+  return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz
+}
+
+const segDist = (px: number, pz: number, ax: number, az: number, bx: number, bz: number) => {
+  const dx = bx - ax, dz = bz - az
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)))
+  return Math.hypot(px - ax - t * dx, pz - az - t * dz)
+}
+
+// Night farm around the board. Everything stays outside the playing field so the grid reads clearly.
 export function farmDecor(level: Level): THREE.Group {
   const group = new THREE.Group()
-  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 })
-  const add = (geo: THREE.BufferGeometry, x: number, y: number, z: number, ry = 0) => {
-    const m = new THREE.Mesh(geo, mat)
-    m.position.set(x, y, z)
-    m.rotation.y = ry
-    m.castShadow = m.receiveShadow = true
-    group.add(m)
-    return m
-  }
+  const mat = MATERIALS.lit
+  const base = -GROUND / V
   const hw = level.width / 2 + BOARD_MARGIN / V, hh = level.height / 2 + BOARD_MARGIN / V
+  const add = (geo: THREE.BufferGeometry, x: number, z: number, ry = 0, y = base, m: THREE.Material = mat) => {
+    const o = new THREE.Mesh(geo, m)
+    o.position.set(x, y, z)
+    o.rotation.y = ry
+    o.castShadow = o.receiveShadow = m === mat
+    group.add(o)
+    return o
+  }
 
-  // surrounding field, darker than the board
-  const field = new THREE.Mesh(
-    new THREE.PlaneGeometry(80, 60).rotateX(-Math.PI / 2),
-    new THREE.MeshStandardMaterial({ color: '#1f3a1b', roughness: 1 }),
+  // landmarks (world units, board centred on the origin, camera on +z)
+  const barnAt = { x: -hw + 2.2, z: -hh - 2.2 }
+  const door = { x: barnAt.x, z: barnAt.z + 1.45 }
+  const pond = { x: hw + 1.9, z: hh - 1.6, r: 1.25 }
+  const onPath = (x: number, z: number) => segDist(x, z, door.x, door.z, door.x + 1.2, -hh - 0.05) < 0.42
+  const inBoard = (x: number, z: number, pad = 0) => Math.abs(x) < hw + pad && Math.abs(z) < hh + pad
+  const inPond = (x: number, z: number, pad = 0) => Math.hypot(x - pond.x, z - pond.z) < pond.r + pad
+
+  // voxel meadow with gentle mounds; skipped under the board
+  const S = 8, WU = 36, DU = 28
+  const g = new VoxelGrid(WU * S, 5, DU * S)
+  for (let iz = 0; iz < DU * S; iz++) for (let ix = 0; ix < WU * S; ix++) {
+    const x = (ix + 0.5) / S - WU / 2, z = (iz + 0.5) / S - DU / 2
+    if (inBoard(x, z, -0.02)) continue
+    const edge = Math.min(Math.abs(Math.abs(x) - hw), Math.abs(Math.abs(z) - hh))
+    const far = Math.max(Math.abs(x) - hw, Math.abs(z) - hh)
+    const h = far < 1.2 ? 1 : 1 + Math.round(vnoise(ix, iz, 22, 3) * Math.min(3, far - 1))
+    for (let y = 0; y < h - 1; y++) g.set(ix, y, iz, C('dirt'))
+    let c: ColorName
+    if (inPond(x, z)) { g.set(ix, 0, iz, C('pondBed')); continue }
+    if (onPath(x, z)) c = hash(ix, iz, 9) < 0.35 ? 'pathDark' : 'path'
+    else {
+      const n = vnoise(ix, iz, 14, 5)
+      c = n < 0.3 ? 'meadow3' : n < 0.62 ? 'meadow1' : n < 0.85 ? 'meadow2' : 'meadowLight'
+      if (edge < 0.25 && hash(ix, iz, 4) < 0.5) c = 'meadow3'
+    }
+    g.set(ix, h - 1, iz, C(c))
+  }
+  add(mesh(g, { voxelSize: 1 / S, anchor: 'bottom-center', jitter: 0.06 }), 0, 0, 0, base - 1 / S)
+
+  // pond water and lily pads
+  const water = new THREE.Mesh(
+    new THREE.CircleGeometry(pond.r + 0.05, 40).rotateX(-Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: '#2f6f8c', emissive: '#0d2a3a', roughness: 0.12, metalness: 0.25, transparent: true, opacity: 0.9 }),
   )
-  field.position.y = -GROUND / V - 0.001
-  field.receiveShadow = true
-  group.add(field)
+  water.position.set(pond.x, base + 0.012, pond.z)
+  group.add(water)
+  const lily = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 7), new THREE.MeshStandardMaterial({ color: PALETTE.lily }))
+  for (const [dx, dz] of [[-0.6, 0.3], [0.5, -0.5], [0.2, 0.8]]) {
+    const l = lily.clone()
+    l.position.set(pond.x + dx, base + 0.025, pond.z + dz)
+    group.add(l)
+  }
+
+  // instanced scatter: grass tufts, flowers, rocks
+  const scatter = (geo: THREE.BufferGeometry, count: number, accept: (x: number, z: number, i: number) => boolean,
+    tint?: (i: number) => string, scale: [number, number] = [0.8, 1.3]) => {
+    const inst = new THREE.InstancedMesh(geo, mat, count)
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3()
+    let n = 0
+    for (let i = 0; n < count && i < count * 40; i++) {
+      const x = (hash(i, 11, count) - 0.5) * WU * 0.92, z = (hash(i, 12, count) - 0.5) * DU * 0.92
+      if (inBoard(x, z, 0.12) || inPond(x, z, 0.1) || onPath(x, z) || !accept(x, z, i)) continue
+      const k = scale[0] + hash(i, 13) * (scale[1] - scale[0])
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), hash(i, 14) * Math.PI * 2)
+      inst.setMatrixAt(n, m.compose(p.set(x, base, z), q, sc.set(k, k * (0.8 + hash(i, 15) * 0.6), k)))
+      if (tint) inst.setColorAt(n, new THREE.Color(tint(i)))
+      n++
+    }
+    inst.count = n
+    inst.castShadow = inst.receiveShadow = true
+    group.add(inst)
+  }
+  const nearBoard = (x: number, z: number) => Math.max(Math.abs(x) - hw, Math.abs(z) - hh)
+  scatter(tuft(), 800, (x, z, i) => hash(i, 16) < 1.1 - nearBoard(x, z) * 0.06, undefined, [0.55, 0.95])
+  scatter(tuft(), 110, (x, z) => nearBoard(x, z) < 0.5, undefined, [0.7, 1.05]) // thicker along the board edge
+  const flowerTints = ['#ffffff', '#ffe066', '#f7a3d0', '#b9a6ff']
+  scatter(flower(), 220, (x, z) => vnoise(x * 8, z * 8, 18, 21) > 0.5, i => flowerTints[i % 4], [0.9, 1.2])
+  scatter(rock(), 40, () => true, undefined, [0.6, 1.6])
+
+  // farm buildings close behind the board
+  const b = barn()
+  add(b.body, barnAt.x, barnAt.z)
+  add(b.glow, barnAt.x, barnAt.z, 0, base, MATERIALS.glow)
+  add(silo(), barnAt.x + 2.6, barnAt.z - 0.4)
+  const lantern = new THREE.PointLight('#ffb35c', 6, 7, 2)
+  lantern.position.set(door.x, base + 1.6, door.z + 0.4)
+  group.add(lantern)
+  const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 0.12), new THREE.MeshBasicMaterial({ color: '#ffd28a' }))
+  lamp.position.copy(lantern.position).add(new THREE.Vector3(0, 0, -0.1))
+  group.add(lamp)
 
   const bale = haybale()
-  add(bale, -hw - 1.4, -GROUND / V, hh - 1.5, 0.3)
-  add(bale, -hw - 1.1, -GROUND / V, hh - 3, -0.2)
-  add(bale, hw + 1.2, -GROUND / V, -hh + 1, 1.2)
-  const t1 = tree(1), t2 = tree(5)
-  add(t1, -hw - 2.6, -GROUND / V, -hh + 1.2)
-  add(t2, hw + 2.8, -GROUND / V, hh - 2)
-  add(t2, -hw - 3.5, -GROUND / V, 0.5, 1)
-  add(t1, hw + 3.2, -GROUND / V, -1.5, 2)
-  add(barn(), -2.5, -GROUND / V, -hh - 5.5)
-  const fence = outerFence(16 * 8)
-  add(fence, -hw - 4.5, -GROUND / V, -hh - 3.2)
-  add(fence, hw - 3.5, -GROUND / V, -hh - 3.2)
+  add(bale, -hw - 1.3, hh - 1.4, 0.3)
+  add(bale, -hw - 1.0, hh - 2.6, -0.2)
+  add(bale, barnAt.x - 2.3, barnAt.z + 1.2, 1.2)
+  add(bale, hw + 1.1, -hh + 0.8, 0.9)
+  const trees = [tree(1), tree(5), tree(9)]
+  for (const [i, x, z] of [[0, -hw - 3, -hh + 1], [1, hw + 2.6, -hh - 0.8], [2, hw + 3.8, -1.2], [0, -hw - 3.6, 1.2],
+    [1, hw + 5.2, hh + 1.5], [2, -hw - 5.5, -hh - 2.5], [1, barnAt.x + 5, barnAt.z - 2.4], [0, -hw - 2.4, hh + 2.4]] as const)
+    add(trees[i], x, z, hash(x, z) * 6)
+  const bushes = [bush(2), bush(7)]
+  for (const [i, x, z] of [[0, -hw - 1.6, -hh + 2.6], [1, hw + 1.5, hh - 2.3], [0, pond.x + 0.9, pond.z - 2.3], [1, barnAt.x - 1.8, barnAt.z - 0.6],
+    [0, hw + 1.4, 0.8], [1, -hw - 1.5, 0.2]] as const)
+    add(bushes[i], x, z, hash(z, x) * 6)
+  const fence = outerFence(16 * 7)
+  add(fence, barnAt.x + 4.2, -hh - 3.4)
+  add(fence, -hw - 5, hh + 3)
 
-  // starry sky
+  // fireflies drifting over the meadow
+  const FLIES = 70
+  const fly = new Float32Array(FLIES * 3)
+  const seeds = Array.from({ length: FLIES }, (_, i) => {
+    let x = 0, z = 0
+    for (let k = 0; k < 20; k++) {
+      x = (hash(i, 31, k) - 0.5) * 20; z = (hash(i, 32, k) - 0.5) * 16
+      if (!inBoard(x, z, 0.3)) break
+    }
+    return { x, z, y: 0.2 + hash(i, 33) * 0.9, p: hash(i, 34) * 10 }
+  })
+  const fireflies = new THREE.Points(
+    new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(fly, 3)),
+    new THREE.PointsMaterial({ color: '#e8ff7a', size: 0.09, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
+  )
+  group.add(fireflies)
+
+  // starry sky and moon
   const stars = new Float32Array(900)
   for (let i = 0; i < 300; i++) {
     const t = hash(i, 1) * Math.PI * 2, p = 0.15 + hash(i, 2) * 0.8
     stars.set([Math.cos(t) * 60 * Math.cos(p), 8 + Math.sin(p) * 40, Math.sin(t) * 60 * Math.cos(p) - 20], i * 3)
   }
-  const sky = new THREE.Points(
+  group.add(new THREE.Points(
     new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(stars, 3)),
     new THREE.PointsMaterial({ color: PALETTE.star, size: 0.25, sizeAttenuation: true, fog: false }),
-  )
-  group.add(sky)
+  ))
   const moon = new THREE.Mesh(new THREE.IcosahedronGeometry(2.5, 1), new THREE.MeshBasicMaterial({ color: '#fff1c9', fog: false }))
   moon.position.set(18, 22, -40)
   group.add(moon)
+
+  group.userData.update = (t: number) => {
+    seeds.forEach((s, i) => fly.set([
+      s.x + Math.sin(t * 0.35 + s.p) * 0.6, s.y + Math.sin(t * 0.9 + s.p * 2) * 0.15, s.z + Math.cos(t * 0.3 + s.p) * 0.6,
+    ], i * 3))
+    fireflies.geometry.attributes.position.needsUpdate = true
+    lantern.intensity = 6 + Math.sin(t * 7) * 0.4 + Math.sin(t * 13) * 0.3
+  }
+  group.userData.update(0)
   return group
 }
