@@ -23,6 +23,7 @@ export interface ControllerHooks {
 
 export const CAUSE_SECONDS = 0.8
 export const ABDUCT_SECONDS = 2.2 // the abduction plays out as its own little scene
+export const STOP_GRACE_SECONDS = 0.3 // a Stop this soon after Launch is the second half of a double click
 export const UNDO_ABDUCT_SECONDS = 0.45 // ...and is played backwards, fast, before the board rewinds
 export const REWIND_SECONDS = 1.5
 
@@ -35,6 +36,7 @@ export class GameController {
   private emitted = 0 // ticks whose events were emitted
   private launched = 0
   private fast = 1
+  private runAge = 0
   private solutionShown = false
 
   constructor(readonly level: Level, private hooks: ControllerHooks = {}) {}
@@ -93,13 +95,19 @@ export class GameController {
     if (this.phase !== 'placing') return false
     this.result = run(this.level, this.placed)
     this.emitted = 0
+    this.runAge = 0
     this.launched++
     this.enter('running')
     return true
   }
 
+  // The level is being left: no more sounds, saves or victory screens from this run.
+  dispose(): void {
+    this.hooks = {}
+  }
+
   stop(): boolean {
-    if (this.phase !== 'running') return false
+    if (this.phase !== 'running' || this.runAge < STOP_GRACE_SECONDS) return false
     this.result = null
     this.enter('placing')
     return true
@@ -107,6 +115,7 @@ export class GameController {
 
   update(dt: number): Frame {
     this.clock += this.phase === 'running' ? dt * this.fast : dt
+    if (this.phase === 'running') this.runAge += dt
     const r = this.result
     if (!r || this.phase === 'placing') {
       const s = createState(this.level, this.placed)
@@ -158,7 +167,7 @@ export class GameController {
     const r = this.result
     const showing = this.phase === 'cause' || this.phase === 'rewinding'
     const failure = showing && r?.outcome.result === 'failed' ? r.outcome.cause : null
-    const highlight = this.phase === 'cause' && failure && failure.type !== 'loop' ? failure.actor : null
+    const highlight = this.phase === 'cause' && failure ? failure.actor : null
     const t = causeT ?? (this.phase === 'cause' ? Math.min(1, this.clock / this.causeSeconds()) : 0)
     return { from, to, alpha, phase: this.phase, highlight, cause: failure, causeT: failure ? t : 0 }
   }

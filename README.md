@@ -13,7 +13,11 @@ npm test         # simulation, solver, levels, UI logic
 npm run build    # static site in dist/
 ```
 
-Dev-only URL options: `?level=N` opens a level directly, `?fps` shows a frame counter, `?quality=high|low` forces a renderer tier, `?level=5&demo=cause&t=0.5` freezes a failure scene. `gallery.html` shows the voxel models.
+URL options: `?fps` shows a frame counter and `?quality=high|low` forces a renderer tier (both also work on the published site). In dev only, `?level=N` opens a level directly and `?level=5&demo=cause&t=0.5` freezes a failure scene; `gallery.html` shows the voxel models.
+
+## Deploy
+
+`.github/workflows/deploy.yml` tests, builds and publishes `dist/` to GitHub Pages on every push to `main`. In the repository settings, set Pages to *Source: GitHub Actions*. The build uses relative URLs, so it works under `/meuh-rocket/`.
 
 ## Rules
 
@@ -34,11 +38,11 @@ One JSON file per level in `src/levels/`:
   "id": 1,
   "name": "Premier pas",
   "idea": "Pose une flèche pour guider la vache jusqu’à la fusée.",
-  "grid": ["+-+-+", "|. R|", "+-+-+"],
+  "grid": ["+-+-+-+", "|. . .|", "+ +-+ +", "|R . O|", "+-+-+-+"],
   "cows": [[0, 0, "E"]],
   "ufos": [],
-  "stock": { "N": 0, "E": 0, "S": 1, "W": 0 },
-  "solution": [[1, 0, "S"]]
+  "stock": { "N": 0, "E": 0, "S": 0, "W": 1 },
+  "solution": [[2, 0, "W"]]
 }
 ```
 

@@ -3,9 +3,10 @@ import type { Frame } from '../game/controller'
 import { TILE } from '../sim/constants'
 import type { Actor, Arrows, Dir, Level } from '../sim/types'
 import {
-  BOARD_MARGIN, MATERIALS, arrowGeometry, boardGeometry, createCow, createUfo, farmDecor, rocketGeometry, tileCenter, ufoBeam,
+  BOARD_MARGIN, MATERIALS, arrowGeometry, boardGeometry, createCow, createUfo, farmDecorFor, rocketGeometry, tileCenter, ufoBeam,
 } from './models'
 import { createDiorama } from './diorama'
+import { disposeTree } from './dispose'
 import { detectQuality } from './quality'
 import { createStage } from './stage'
 import { type Pose, gait } from './gait'
@@ -60,6 +61,7 @@ export class BoardScene {
   private walked: number[] = []
   private lastPos: THREE.Vector2[] = []
   private decor: THREE.Group | null = null
+  private board: THREE.Mesh | null = null
   private cursor = new THREE.Group()
   private cursorFill: THREE.Mesh
   private cursorMat = new THREE.MeshBasicMaterial({ color: '#fff3d0', toneMapped: false })
@@ -124,9 +126,13 @@ export class BoardScene {
 
   loadLevel(level: Level): void {
     this.level = level
+    // free what was built for the previous level: its board and the UFO beams (the rest is shared)
+    if (this.board) disposeTree(this.board)
+    for (const b of this.beams) disposeTree(b)
     this.root.clear()
-    this.root.add(shadowed(new THREE.Mesh(boardGeometry(level), MATERIALS.lit)))
-    this.decor = farmDecor(level)
+    this.board = shadowed(new THREE.Mesh(boardGeometry(level), MATERIALS.lit))
+    this.root.add(this.board)
+    this.decor = farmDecorFor(level)
     this.root.add(this.decor)
     this.rockets = []
     this.launchAt = null

@@ -80,6 +80,15 @@ describe('run', () => {
     expect(run(l, arrows()).outcome).toMatchObject({ result: 'failed', cause: { type: 'loop' } })
   })
 
+  it('fails as soon as a cow repeats its own state, even while a UFO keeps wandering', () => {
+    // the cow bounces in a 2-cell pen; the UFO patrols a long corridor on another row
+    const l = lvl(['+-+-+-+-+-+-+-+-+-+-+-+-+', '|. .|. . . . . . . . . .|', '+-+-+-+-+-+-+-+-+-+-+-+-+', '|. . . . . . . . . . . .|', '+-+-+-+-+-+-+-+-+-+-+-+-+'],
+      { cows: [[0, 0, 'E']], ufos: [[3, 1, 'E']] })
+    const r = run(l, arrows())
+    expect(r.outcome).toMatchObject({ result: 'failed', cause: { type: 'loop', actor: 0 } })
+    expect(r.history.length).toBeLessThanOrEqual(9) // one lap of the pen, not the joint cycle
+  })
+
   it('history starts at the initial state and records visited cells', () => {
     const l = lvl(['+-+-+-+-+', '|. . . R|', '+-+-+-+-+'], { cows: [[0, 0, 'E']] })
     const r = run(l, arrows())

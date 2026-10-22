@@ -146,8 +146,22 @@ export function createCow(material: THREE.Material): THREE.Group {
   return group
 }
 
-// Saucer with a little alien in the cockpit, rim lights and a glass dome.
+let ufoParts: { hull: THREE.BufferGeometry; lights: THREE.BufferGeometry; dome: THREE.BufferGeometry } | null = null
+
+// Saucer with a little alien in the cockpit, rim lights and a glass dome. Geometries are shared by every saucer.
 export function createUfo(): THREE.Group {
+  ufoParts ??= buildUfoParts()
+  const hull = new THREE.Mesh(ufoParts.hull, MATERIALS.metal)
+  hull.castShadow = hull.receiveShadow = true
+  const glowMesh = new THREE.Mesh(ufoParts.lights, MATERIALS.glow)
+  const domeMesh = new THREE.Mesh(ufoParts.dome, MATERIALS.glass)
+  domeMesh.renderOrder = 2
+  const group = new THREE.Group()
+  group.add(hull, glowMesh, domeMesh)
+  return group
+}
+
+function buildUfoParts() {
   const g = new VoxelGrid(30, 15, 30)
   const c = 14.5
   const profile = [6, 9.5, 12, 13.3, 14, 12.8, 10.8, 8]
@@ -164,8 +178,7 @@ export function createUfo(): THREE.Group {
   g.box(16, 10, 16, 16, 11, 16, C('eye'))
   g.set(c | 0, 13, c | 0, C('dome')); g.set((c | 0) + 1, 13, c | 0, C('dome'))
   g.set(c | 0, 14, c | 0, C('ufoLight'))
-  const hull = new THREE.Mesh(actor(g), MATERIALS.metal)
-  hull.castShadow = hull.receiveShadow = true
+  const hull = actor(g)
 
   const lights = new VoxelGrid(30, 6, 30)
   for (let a = 0; a < 12; a++) {
@@ -173,16 +186,11 @@ export function createUfo(): THREE.Group {
     lights.set(Math.round(c + Math.cos(t) * 14.2), 4, Math.round(c + Math.sin(t) * 14.2), C('ufoLight'))
   }
   disk(lights, c, 0, c, 2.2, C('beam'))
-  const glowMesh = new THREE.Mesh(mesh(lights, { voxelSize: 1 / R }).translate(0, -0.004, 0), MATERIALS.glow)
+  const lightsGeo = mesh(lights, { voxelSize: 1 / R }).translate(0, -0.004, 0)
 
   const dome = new VoxelGrid(30, 15, 30)
   for (let y = 8; y <= 14; y++) disk(dome, c, y, c, Math.sqrt(Math.max(0, 6.8 ** 2 - (y - 8) ** 2)), C('dome'))
-  const domeMesh = new THREE.Mesh(mesh(dome, { voxelSize: 1 / R }), MATERIALS.glass)
-  domeMesh.renderOrder = 2
-
-  const group = new THREE.Group()
-  group.add(hull, glowMesh, domeMesh)
-  return group
+  return { hull, lights: lightsGeo, dome: mesh(dome, { voxelSize: 1 / R }) }
 }
 
 export function ufoBeam(): THREE.Mesh {
@@ -458,6 +466,16 @@ const segDist = (px: number, pz: number, ax: number, az: number, bx: number, bz:
   const dx = bx - ax, dz = bz - az
   const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)))
   return Math.hypot(px - ax - t * dx, pz - az - t * dz)
+}
+
+const decorCache = new Map<string, THREE.Group>()
+
+// The decor only depends on the board size: build it once and reuse it across levels.
+export function farmDecorFor(level: Level): THREE.Group {
+  const key = `${level.width}x${level.height}`
+  let decor = decorCache.get(key)
+  if (!decor) decorCache.set(key, (decor = farmDecor(level)))
+  return decor
 }
 
 // Night farm around the board. Everything stays outside the playing field so the grid reads clearly.

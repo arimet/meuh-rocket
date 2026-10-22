@@ -69,6 +69,9 @@ export function run(level: Level, arrows: Arrows): RunResult {
   const visited = new Set<number>()
   const arrowsHit = new Set<number>()
   const seen = new Set([stateKey(state)])
+  // A cow's path depends only on its own state and the board, so once it repeats a state
+  // it will never reach a rocket: fail right away rather than waiting for every actor to cycle.
+  const cowSeen = state.actors.map(a => (a.kind === 'cow' ? new Set([`${a.x},${a.y},${a.dir}`]) : null))
 
   for (;;) {
     const prev = state
@@ -85,9 +88,16 @@ export function run(level: Level, arrows: Arrows): RunResult {
     if (failure) return { outcome: { result: 'failed', cause: failure }, history, events, visited, arrowsHit }
     if (state.actors.every(a => a.kind !== 'cow' || a.status === 'saved'))
       return { outcome: { result: 'won' }, history, events, visited, arrowsHit }
+    const looping = state.actors.findIndex((a, i) => {
+      if (a.kind !== 'cow' || a.status !== 'active') return false
+      const k = `${a.x},${a.y},${a.dir}`
+      if (cowSeen[i]!.has(k)) return true
+      cowSeen[i]!.add(k)
+      return false
+    })
     const key = stateKey(state)
-    if (seen.has(key) || state.tick >= MAX_TICKS) {
-      const loop: SimEvent = { tick: state.tick, type: 'loop', actor: 0 }
+    if (looping >= 0 || seen.has(key) || state.tick >= MAX_TICKS) {
+      const loop: SimEvent = { tick: state.tick, type: 'loop', actor: Math.max(0, looping) }
       events.push(loop)
       return { outcome: { result: 'failed', cause: loop }, history, events, visited, arrowsHit }
     }

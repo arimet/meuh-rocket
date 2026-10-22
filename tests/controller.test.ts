@@ -85,7 +85,7 @@ describe('GameController', () => {
     const c = make()
     c.place(1, 'S')
     c.launch()
-    c.update(0.1)
+    c.update(0.35)
     expect(c.stop()).toBe(true)
     expect(c.update(0).phase).toBe('placing')
     expect([...c.arrows]).toEqual([[1, 'S']])
@@ -199,6 +199,7 @@ describe('GameController', () => {
     const c = make()
     expect(c.launches).toBe(0)
     c.launch()
+    c.update(0.35)
     c.stop()
     c.launch()
     expect(c.launches).toBe(2)
@@ -243,5 +244,35 @@ describe('GameController', () => {
     expect(c.speed).toBe(1)
     c.speed = 4
     expect(c.speed).toBe(4)
+  })
+
+  it('ignores a Stop that lands right after Launch (double click)', () => {
+    const c = make()
+    c.launch()
+    c.update(0.05)
+    expect(c.stop()).toBe(false)
+    expect(c.update(0).phase).toBe('running')
+    c.update(0.4)
+    expect(c.stop()).toBe(true)
+  })
+
+  it('a disposed controller fires no more hooks', () => {
+    const onWin = vi.fn(), onEvent = vi.fn()
+    const c = make({ S: 1 }, { onWin, onEvent })
+    c.place(1, 'S')
+    c.launch()
+    c.dispose()
+    runFor(c, 3)
+    expect(onWin).not.toHaveBeenCalled()
+    expect(onEvent).not.toHaveBeenCalled()
+  })
+
+  it('blinks the cow that loops', () => {
+    const c = new GameController(lvl(['+-+-+', '|. .|', '+-+-+'], { cows: [[0, 0, 'E']] }))
+    c.launch()
+    let f = c.update(0)
+    while (f.phase === 'running') f = c.update(0.02)
+    expect(f.phase).toBe('cause')
+    expect(f.highlight).toBe(0)
   })
 })

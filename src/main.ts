@@ -22,6 +22,7 @@ let game = new GameController(level)
 let playing = false
 let phase: Phase = 'placing'
 let speed = 1 // kept across levels
+let hovered: number | null = null
 
 const remaining = () => Object.fromEntries(DIRS.map(d => [d, game.remaining(d)])) as Record<Dir, number>
 const refreshHud = () => screens.updateHud({ remaining: remaining(), running: phase === 'running', busy: phase !== 'placing' })
@@ -29,6 +30,8 @@ const refreshHud = () => screens.updateHud({ remaining: remaining(), running: ph
 function startLevel(id: number) {
   level = LEVELS.find(l => l.id === id) ?? LEVELS[0]
   phase = 'placing'
+  hovered = null
+  game.dispose()
   game = new GameController(level, {
     onPhase: p => { phase = p; closePicker(); refreshHud(); if (p === 'cause') sfx.fail() },
     onEvent: e => { if (e.type === 'saved') sfx.moo(); if (e.type === 'abducted') sfx.beam() },
@@ -39,7 +42,7 @@ function startLevel(id: number) {
       const current = game
       sfx.launch()
       await scene.launchRocket()
-      if (game !== current) return
+      if (game !== current || !playing) return // the player left during the lift-off
       sfx.win()
       screens.showVictory({ excellent: r.excellent, hasNext: level.id < LEVELS.length, stars, usedSolution: game.usedSolution })
     },
@@ -52,7 +55,10 @@ function startLevel(id: number) {
   refreshHud()
 }
 
+// Leaving a level abandons its run: no more sounds, saves or victory screen from it.
 function backdrop() {
+  game.dispose()
+  hovered = null
   playing = false
   closePicker()
   scene.setHover(null)
@@ -108,7 +114,6 @@ canvas.addEventListener('pointerdown', e => {
   scene.setSelected(cell)
 })
 
-let hovered: number | null = null
 canvas.addEventListener('pointermove', e => {
   if (e.pointerType !== 'mouse' || !playing) return
   hovered = phase === 'placing' ? scene.cellAt(e.clientX, e.clientY) : null
