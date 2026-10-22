@@ -167,7 +167,7 @@ export class GameController {
     const r = this.result
     const showing = this.phase === 'cause' || this.phase === 'rewinding'
     const failure = showing && r?.outcome.result === 'failed' ? r.outcome.cause : null
-    const highlight = this.phase === 'cause' && failure ? failure.actor : null
+    const highlight = this.phase === 'cause' && failure && failure.actor >= 0 ? failure.actor : null
     const t = causeT ?? (this.phase === 'cause' ? Math.min(1, this.clock / this.causeSeconds()) : 0)
     return { from, to, alpha, phase: this.phase, highlight, cause: failure, causeT: failure ? t : 0 }
   }

@@ -75,6 +75,7 @@ export function run(level: Level, arrows: Arrows): RunResult {
   const events: SimEvent[] = []
   const visited = new Set<number>()
   const firstVisit = new Map<number, number>()
+  const firstVisitBy = state.actors.map(() => new Map<number, number>())
   const arrowsHit = new Set<number>()
   const seen = new Set([stateKey(state)])
   // A cow's path depends only on its own state and the board, so once it repeats a state
@@ -93,11 +94,12 @@ export function run(level: Level, arrows: Arrows): RunResult {
       const cell = (a.y / TILE) * level.width + a.x / TILE
       visited.add(cell)
       if (!firstVisit.has(cell)) firstVisit.set(cell, state.tick)
+      if (!firstVisitBy[i].has(cell)) firstVisitBy[i].set(cell, state.tick)
     })
     const failure = res.events.find(e => FAILURES.has(e.type))
-    if (failure) return { outcome: { result: 'failed', cause: failure }, history, events, visited, firstVisit, arrowsHit }
+    if (failure) return { outcome: { result: 'failed', cause: failure }, history, events, visited, firstVisit, firstVisitBy, arrowsHit }
     if (state.actors.every(a => a.kind !== 'cow' || a.status === 'saved'))
-      return { outcome: { result: 'won' }, history, events, visited, firstVisit, arrowsHit }
+      return { outcome: { result: 'won' }, history, events, visited, firstVisit, firstVisitBy, arrowsHit }
     const looping = state.actors.findIndex((a, i) => {
       if (a.kind !== 'cow' || a.status !== 'active') return false
       const k = `${a.x},${a.y},${a.dir}`
@@ -107,9 +109,10 @@ export function run(level: Level, arrows: Arrows): RunResult {
     })
     const key = stateKey(state)
     if (looping >= 0 || seen.has(key) || state.tick >= MAX_TICKS) {
-      const loop: SimEvent = { tick: state.tick, type: 'loop', actor: Math.max(0, looping) }
+      // actor -1: the whole board cycles (or ran too long) rather than one identified cow
+      const loop: SimEvent = { tick: state.tick, type: 'loop', actor: looping }
       events.push(loop)
-      return { outcome: { result: 'failed', cause: loop }, history, events, visited, firstVisit, arrowsHit }
+      return { outcome: { result: 'failed', cause: loop }, history, events, visited, firstVisit, firstVisitBy, arrowsHit }
     }
     seen.add(key)
   }

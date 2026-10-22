@@ -139,7 +139,7 @@ export class BoardScene {
     this.root.clear()
     this.board = shadowed(new THREE.Mesh(boardGeometry(level, BOARD_THEMES[theme]), MATERIALS.lit))
     this.root.add(this.board)
-    const sky = theme === 'desert' ? '#22152f' : SKY
+    const sky = { farm: SKY, desert: '#22152f', ship: '#05070f' }[theme]
     ;(this.scene.background as THREE.Color).set(sky)
     ;(this.scene.fog as THREE.Fog).color.set(sky)
     // portals: one colour per pair

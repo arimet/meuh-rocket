@@ -264,6 +264,7 @@ export interface BoardTheme {
 }
 export const BOARD_THEMES: Record<Theme, BoardTheme> = {
   farm: { tiles: ['grass1', 'grass2'], speck: 'grass3', line: 'grassLine', margin: 'grass3', ground: ['soil', 'dirt', 'dirtDark'], rim: 'dirtDark', post: 'woodDark', rail: 'woodLight' },
+  ship: { tiles: ['deck1', 'deck2'], speck: 'deckSpeck', line: 'deckLine', margin: 'deckMargin', ground: ['hullDark', 'hull', 'hull'], rim: 'screenWarn', post: 'hullDark', rail: 'energy' },
   desert: { tiles: ['sand1', 'sand2'], speck: 'sandSpeck', line: 'sandLine', margin: 'sandMargin', ground: ['clayDark', 'clay', 'rockRed'], rim: 'clayDark', post: 'steel', rail: 'steelLight' },
 }
 

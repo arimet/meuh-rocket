@@ -59,5 +59,6 @@ export interface RunResult {
   events: SimEvent[]
   visited: Set<number>
   firstVisit: Map<number, number> // cell → tick an actor first reached its centre
+  firstVisitBy: Map<number, number>[] // the same, per actor
   arrowsHit: Set<number>
 }
