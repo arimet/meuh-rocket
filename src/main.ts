@@ -41,7 +41,7 @@ function startLevel(id: number) {
     onEvent: e => { if (e.type === 'saved') sfx.moo(); if (e.type === 'abducted') sfx.beam() },
     onWin: async r => {
       const stars = starsFor(game.launches, game.usedSolution)
-      progress = completeLevel(progress, level.id, LEVELS.length, stars)
+      progress = completeLevel(progress, level.id, stars)
       saveProgress(progress)
       const current = game
       sfx.launch()
@@ -75,7 +75,7 @@ const screens = createScreens(ui, {
   onSelect: id => startLevel(id),
   onLaunch: () => { closePicker(); screens.foldIdea(); if (game.launch()) sfx.moo(); else game.stop() },
   onClear: () => { game.clear(); scene.setArrows(game.arrows); refreshHud() },
-  onMenu: () => { backdrop(); screens.showSelect(LEVELS, progress, WORLDS, worldOf) },
+  onMenu: () => { backdrop(); screens.showSelect(LEVELS, progress, WORLDS, worldOf, worldOf(level.id)) },
   onNext: () => startLevel(level.id + 1),
   onSpeed: () => cycleSpeed(),
   onWorld: world => {

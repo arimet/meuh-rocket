@@ -103,6 +103,9 @@ describe('portals', () => {
     expect(() => lvl(['+-+-+-+', '|1 . .|', '+-+-+-+'])).toThrow(/1/)
     expect(() => lvl(['+-+-+-+', '|1 1 1|', '+-+-+-+'])).toThrow(/1/)
   })
+  it('rejects a portal walled in on every side (its exit would go through a wall)', () => {
+    expect(() => lvl(['+-+-+-+-+', '|. 1 . .|', '+-+-+-+-+', '|.|1|. .|', '+-+-+-+-+'])).toThrow(/mur/i)
+  })
   it('rejects a spawn on a portal', () => {
     expect(() => lvl(['+-+-+-+', '|1 . 1|', '+-+-+-+'], { cows: [[0, 0, 'E']] })).toThrow()
   })

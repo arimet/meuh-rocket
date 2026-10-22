@@ -41,9 +41,10 @@ export function saveProgress(p: Progress, storage: Pick<Storage, 'setItem'> | nu
   try { storage?.setItem(STORAGE_KEY, JSON.stringify(p)) } catch { /* progress just won't persist */ }
 }
 
-export function completeLevel(p: Progress, id: number, total: number, stars: number): Progress {
+// `unlocked` may point past the last level shipped today: the next world then opens as soon as it exists.
+export function completeLevel(p: Progress, id: number, stars: number): Progress {
   return {
-    unlocked: Math.max(p.unlocked, Math.min(id + 1, total)),
+    unlocked: Math.max(p.unlocked, id + 1),
     completed: p.completed.includes(id) ? p.completed : [...p.completed, id],
     stars: { ...p.stars, [id]: Math.max(p.stars[id] ?? 0, stars) },
   }

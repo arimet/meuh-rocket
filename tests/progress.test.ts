@@ -36,17 +36,17 @@ describe('progress', () => {
     expect(() => saveProgress(DEFAULT, null)).not.toThrow()
   })
 
-  it('completeLevel unlocks next but not past total', () => {
-    expect(completeLevel({ unlocked: 10, completed: [], stars: {} }, 10, 10, 3).unlocked).toBe(10)
-    expect(completeLevel({ unlocked: 3, completed: [1, 2], stars: {} }, 3, 10, 2)).toEqual({ unlocked: 4, completed: [1, 2, 3], stars: { 3: 2 } })
-    expect(completeLevel({ unlocked: 4, completed: [1, 2, 3], stars: {} }, 2, 10, 1).completed).toEqual([1, 2, 3])
+  it('completeLevel unlocks the next level, even beyond the levels shipped today (a later world)', () => {
+    expect(completeLevel({ unlocked: 10, completed: [], stars: {} }, 10, 3).unlocked).toBe(11)
+    expect(completeLevel({ unlocked: 3, completed: [1, 2], stars: {} }, 3, 2)).toEqual({ unlocked: 4, completed: [1, 2, 3], stars: { 3: 2 } })
+    expect(completeLevel({ unlocked: 4, completed: [1, 2, 3], stars: {} }, 2, 1).completed).toEqual([1, 2, 3])
   })
 
   it('keeps the best stars, and a revealed solution earns none', () => {
-    const p = completeLevel({ unlocked: 2, completed: [1], stars: { 1: 2 } }, 1, 10, 0)
+    const p = completeLevel({ unlocked: 2, completed: [1], stars: { 1: 2 } }, 1, 0)
     expect(p.stars[1]).toBe(2)
-    expect(completeLevel(p, 1, 10, 3).stars[1]).toBe(3)
-    expect(completeLevel({ unlocked: 2, completed: [], stars: {} }, 2, 10, 0)).toEqual({ unlocked: 3, completed: [2], stars: { 2: 0 } })
+    expect(completeLevel(p, 1, 3).stars[1]).toBe(3)
+    expect(completeLevel({ unlocked: 2, completed: [], stars: {} }, 2, 0)).toEqual({ unlocked: 3, completed: [2], stars: { 2: 0 } })
   })
 
   it('starsFor rewards few launches', () => {

@@ -85,6 +85,11 @@ export function parseLevel(json: unknown): Level {
     })
   }
 
+  const lvlSoFar = { width, height, wallN, wallW } as Level
+  for (const [i, twin] of portals.entries())
+    if (twin >= 0 && DIRS.every(d => blocked(lvlSoFar, i % width, Math.floor(i / width), d)))
+      fail(`Téléporteur en (${i % width}, ${Math.floor(i / width)}) entouré de murs : on ne pourrait pas en sortir`)
+
   const rawStock = (j.stock ?? {}) as Record<string, unknown>
   const stock = {} as Record<Dir, number>
   for (const d of DIRS) {

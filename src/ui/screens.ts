@@ -159,9 +159,11 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   return {
     hudExtra: extra,
     showTitle: () => only(title),
-    showSelect(all: Level[], progress: Progress, worlds: World[], worldOf: (id: number) => World) {
-      // open on the world of the most advanced playable level, then keep the player's choice
-      if (worldIndex < 0) worldIndex = worlds.indexOf(worldOf(Math.min(progress.unlocked, all.at(-1)?.id ?? 1)))
+    // `focus` opens a given world (the one just played); otherwise the first visit opens on the most
+    // advanced playable level, and later visits keep the world the player browsed to
+    showSelect(all: Level[], progress: Progress, worlds: World[], worldOf: (id: number) => World, focus?: World) {
+      if (focus) worldIndex = worlds.indexOf(focus)
+      else if (worldIndex < 0) worldIndex = worlds.indexOf(worldOf(Math.min(progress.unlocked, all.at(-1)?.id ?? 1)))
       shownSelect = step => {
         worldIndex = Math.max(0, Math.min(worlds.length - 1, worldIndex + step))
         this.showSelect(all, progress, worlds, worldOf)

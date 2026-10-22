@@ -1,7 +1,7 @@
 {
   "id": 17,
   "name": "La transhumance",
-  "idea": "Tout le troupeau doit passer par les portes.",
+  "idea": "Sept vaches, deux paires de portes : trouve les passages qu’elles partagent.",
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . 2 . O|",
