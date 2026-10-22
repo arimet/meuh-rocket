@@ -72,4 +72,15 @@ describe('solver pruning', () => {
     }
     expect(pruned).toBeLessThan(full)
   }, 120_000)
+
+  it('keeps the cow saved on the very tick a ufo reaches another rocket', () => {
+    // bare run: the cow boards at (0,1) on the tick the ufo enters (5,6); a shorter cow route wins
+    const level = parseLevel({
+      grid: ['+-+-+-+-+-+-+', '|. . . . .|.|', '+ + + + + + +', '|R . . . .|.|', '+-+-+-+-+-+ +',
+        ...Array(4).fill(['|. . . . .|.|', '+ + + + + + +']).flat(), '|. . . . .|R|', '+-+-+-+-+-+-+'],
+      cows: [[0, 0, 'E']], ufos: [[5, 0, 'S']], stock: { N: 0, E: 0, S: 1, W: 0 },
+    })
+    expect(run(level, new Map()).outcome).toMatchObject({ result: 'failed', cause: { type: 'ufoInRocket' } })
+    expect(solve(level)).toMatchObject({ solvable: true, solutions: reference(level).solutions })
+  })
 })

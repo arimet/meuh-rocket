@@ -14,10 +14,11 @@ export interface SolveReport {
 // The actors whose own paths decide a failure. A winning placement either avoids the failure
 // (one of these actors moves differently before it) or wins before it happens, which needs every
 // cow still on its way to move differently — the first of them is enough to name.
-function culprits(cause: SimEvent, last: SimState): number[] | null {
+// `before` is the state one tick before the failure: a cow saved on the failure tick itself still counts.
+function culprits(cause: SimEvent, before: SimState): number[] | null {
   if (cause.actor < 0) return null // the whole board cycles: anyone may need to change
   const who = cause.type === 'abducted' ? [cause.actor, cause.by!] : [cause.actor]
-  const waiting = last.actors.findIndex(a => a.kind === 'cow' && a.status === 'active')
+  const waiting = before.actors.findIndex(a => a.kind === 'cow' && a.status === 'active')
   if (waiting >= 0 && !who.includes(waiting)) who.push(waiting)
   return who
 }
@@ -46,7 +47,7 @@ export function solve(level: Level, budget = Infinity): SolveReport {
       if (!example || p.size < example.size) example = new Map(p)
     }
     const failed = r.outcome.result === 'failed' ? r.outcome.cause : null
-    const who = failed && culprits(failed, r.history[r.history.length - 1])
+    const who = failed && culprits(failed, r.history[Math.max(0, r.history.length - 2)])
     const candidates = new Map<number, number>()
     for (const visits of who ? who.map(i => r.firstVisitBy[i]) : [r.firstVisit])
       for (const [cell, tick] of visits) if (!failed || tick < failed.tick) candidates.set(cell, tick)
