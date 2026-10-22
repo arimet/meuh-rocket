@@ -2,10 +2,11 @@
 
 A browser puzzle game in the spirit of *ChuChu Rocket!*'s puzzle mode: cows walk in straight lines, turn right at walls and follow the arrows you lay down. Get every cow into the escape rocket before a UFO beams one up. Voxel diorama, Three.js, no server.
 
-Two worlds of ten levels each, unlocked in order. The interface is in French.
+Three worlds, unlocked in order: ten levels, ten levels, then twenty. The interface is in French.
 
 - **World 1, *La ferme***: the tutorial — arrows, walls, holes, UFOs.
 - **World 2, *Roswell, 1947***: a night desert around a crashed saucer, built on teleporters.
+- **World 3, *Le vaisseau-mère***: inside the mothership, hard boards with many cows and four to seven arrows, each one needed.
 
 ## Run
 
@@ -35,7 +36,7 @@ The simulation is deterministic and runs ahead of the renderer, which plays it b
 
 ## Levels
 
-One JSON file per level in `src/levels/`; ids 1–10 are world 1 and 11–20 world 2 (`WORLDS` in `src/levels/index.ts` names them and picks their theme):
+One JSON file per level in `src/levels/`; ids 1–10 are world 1, 11–20 world 2 and 21–40 world 3 (`WORLDS` in `src/levels/index.ts` names them and picks their theme):
 
 ```json
 {

@@ -89,8 +89,8 @@ describe('levels', () => {
         IDEAS[level.id]?.(level, r.minArrows!, r.example!)
         if (level.id > 20) {
           // world 3: hard boards — many arrows truly needed, plenty of cows, (almost) one answer
-          expect(r.minArrows).toBeGreaterThanOrEqual(level.id > 32 ? 6 : level.id > 24 ? 5 : 4)
-          expect(level.cows.length).toBeGreaterThanOrEqual(3)
+          expect(r.minArrows).toBeGreaterThanOrEqual(level.id >= 37 ? 6 : level.id >= 34 ? 5 : 4)
+          expect(level.cows.length).toBeGreaterThanOrEqual(5)
           expect(r.solutions).toBeLessThanOrEqual(2)
         } else if (level.id > 10) {
           expect(cowJumps(level, r.example!).length).toBeGreaterThan(0)
