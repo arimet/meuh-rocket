@@ -1,11 +1,8 @@
-import { resolve } from 'node:path'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
+  // relative URLs: the build works under any sub-path (GitHub Pages serves it at /meuh-rocket/)
   base: './',
-  build: {
-    rollupOptions: {
-      input: { main: resolve(import.meta.dirname, 'index.html'), gallery: resolve(import.meta.dirname, 'gallery.html') },
-    },
-  },
+  // one bundle is fine: three.js makes most of its ~620 KB (~160 KB gzipped)
+  build: { chunkSizeWarningLimit: 700 },
 })
