@@ -1,7 +1,7 @@
 {
   "id": 40,
-  "name": "Retour sur Terre",
-  "idea": "12 vaches, 2 ovnis, 2 paires de portes et 6 flèches : chacune compte.",
+  "name": { "fr": "Retour sur Terre", "en": "Back to Earth" },
+  "idea": { "fr": "12 vaches, 2 ovnis, 2 paires de portes et 6 flèches : chacune compte.", "en": "12 cows, 2 UFOs, 2 pairs of doors and 6 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

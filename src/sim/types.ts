@@ -1,3 +1,4 @@
+import type { Text } from '../ui/i18n'
 export type Dir = 'N' | 'E' | 'S' | 'W'
 export type CellKind = 'empty' | 'hole' | 'rocket' | 'portal'
 
@@ -9,8 +10,8 @@ export interface Spawn {
 
 export interface Level {
   id: number
-  name: string
-  idea: string
+  name: Text
+  idea: Text
   width: number
   height: number
   cells: CellKind[] // index = y * width + x

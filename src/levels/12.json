@@ -1,7 +1,7 @@
 {
   "id": 12,
-  "name": "Viser la porte",
-  "idea": "Guide la vache jusqu’au bon téléporteur.",
+  "name": { "fr": "Viser la porte", "en": "Aim for the Door" },
+  "idea": { "fr": "Guide la vache jusqu’au bon téléporteur.", "en": "Guide the cow to the right teleporter." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . 1 . . . O . .|",

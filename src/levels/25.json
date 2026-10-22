@@ -1,7 +1,7 @@
 {
   "id": 25,
-  "name": "L’infirmerie",
-  "idea": "9 vaches, 2 ovnis, 2 paires de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "L’infirmerie", "en": "The Sickbay" },
+  "idea": { "fr": "9 vaches, 2 ovnis, 2 paires de portes et 4 flèches : chacune compte.", "en": "9 cows, 2 UFOs, 2 pairs of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . 1 . . . . . . .|",

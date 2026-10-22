@@ -1,3 +1,4 @@
+import type { Text } from '../ui/i18n'
 import type { CellKind, Dir, Level, Spawn } from './types'
 
 export const DIRS: readonly Dir[] = ['N', 'E', 'S', 'W']
@@ -23,6 +24,12 @@ const CELL_CHARS: Record<string, CellKind> = { '.': 'empty', O: 'hole', R: 'rock
 
 function fail(msg: string): never {
   throw new Error(msg)
+}
+
+// `{ "fr": …, "en": … }`; a plain string stands for both languages
+const text = (v: unknown): Text => {
+  if (typeof v === 'object' && v !== null) { const o = v as Record<string, unknown>; return { fr: String(o.fr ?? ''), en: String(o.en ?? '') } }
+  return { fr: String(v ?? ''), en: String(v ?? '') }
 }
 
 const isDir = (d: unknown): d is Dir => typeof d === 'string' && (DIRS as string[]).includes(d)
@@ -113,8 +120,8 @@ export function parseLevel(json: unknown): Level {
 
   return {
     id: Number(j.id ?? 0),
-    name: String(j.name ?? ''),
-    idea: String(j.idea ?? ''),
+    name: text(j.name),
+    idea: text(j.idea),
     width,
     height,
     cells,

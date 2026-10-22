@@ -1,7 +1,7 @@
 {
   "id": 38,
-  "name": "Le cœur du vaisseau",
-  "idea": "8 vaches, 1 ovni, 2 paires de portes et 6 flèches : chacune compte.",
+  "name": { "fr": "Le cœur du vaisseau", "en": "The Heart of the Ship" },
+  "idea": { "fr": "8 vaches, 1 ovni, 2 paires de portes et 6 flèches : chacune compte.", "en": "8 cows, 1 UFO, 2 pairs of doors and 6 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . O .|",

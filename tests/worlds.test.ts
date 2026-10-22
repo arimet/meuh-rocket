@@ -12,6 +12,6 @@ describe('worlds', () => {
   })
   it('names each world and gives it a theme', () => {
     expect(WORLDS.map(w => w.theme)).toEqual(['farm', 'desert', 'ship'])
-    expect(WORLDS[1].name).toBe('Roswell, 1947')
+    expect(WORLDS[1].name.fr).toBe('Roswell, 1947')
   })
 })

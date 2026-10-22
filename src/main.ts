@@ -12,11 +12,13 @@ import { BoardScene } from './render/boardScene'
 import { DIRS } from './sim/level'
 import { canPlace } from './sim/sim'
 import type { Dir, Level } from './sim/types'
+import { getLang, setLang, t } from './ui/i18n'
 import { icon } from './ui/icons'
 import { createPicker } from './ui/picker'
 import { completeLevel, loadProgress, saveProgress, starsFor } from './ui/progress'
 import { createScreens } from './ui/screens'
 
+document.documentElement.lang = getLang()
 const canvas = document.getElementById('scene') as HTMLCanvasElement
 const ui = document.getElementById('ui')!
 const scene = new BoardScene(canvas)
@@ -82,6 +84,7 @@ const screens = createScreens(ui, {
   onMenu: () => { backdrop(); screens.showSelect(LEVELS, progress, WORLDS, worldOf, worldOf(level.id)) },
   onNext: () => startLevel(level.id + 1),
   onSpeed: () => cycleSpeed(),
+  onLang: lang => { setLang(lang); paintSound() },
   onWorld: world => {
     // behind the select screen, show the first level of the world being browsed
     if (playing || worldOf(level.id) === world) return
@@ -168,7 +171,7 @@ const sound = document.createElement('button')
 sound.className = 'block sound'
 const paintSound = () => {
   sound.innerHTML = icon(sfx.muted ? 'mute' : 'sound')
-  sound.setAttribute('aria-label', sfx.muted ? 'Activer le son' : 'Couper le son')
+  sound.setAttribute('aria-label', sfx.muted ? t().soundOn : t().soundOff)
 }
 sound.addEventListener('click', () => { sfx.setMuted(!sfx.muted); paintSound() })
 paintSound()
@@ -201,7 +204,7 @@ if (fpsEl) {
 let prev = performance.now()
 scene.renderer.setAnimationLoop(now => {
   if (fpsEl && ++frames && now - fpsAt > 500) {
-    fpsEl.textContent = `${Math.round((frames * 1000) / (now - fpsAt))} i/s · ${scene.quality}`
+    fpsEl.textContent = `${Math.round((frames * 1000) / (now - fpsAt))} ${t().fps} · ${scene.quality}`
     frames = 0
     fpsAt = now
   }

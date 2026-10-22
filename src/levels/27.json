@@ -1,7 +1,7 @@
 {
   "id": 27,
-  "name": "La cantine",
-  "idea": "9 vaches, 2 ovnis, 3 paires de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "La cantine", "en": "The Mess Hall" },
+  "idea": { "fr": "9 vaches, 2 ovnis, 3 paires de portes et 4 flèches : chacune compte.", "en": "9 cows, 2 UFOs, 3 pairs of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . .|. . . . . . . . .|",

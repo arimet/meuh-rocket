@@ -1,7 +1,7 @@
 {
   "id": 18,
-  "name": "Le champ de mines",
-  "idea": "Des trous partout : chaque saut compte.",
+  "name": { "fr": "Le champ de mines", "en": "The Minefield" },
+  "idea": { "fr": "Des trous partout : chaque saut compte.", "en": "Holes everywhere: every jump counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . O|",

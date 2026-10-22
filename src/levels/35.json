@@ -1,7 +1,7 @@
 {
   "id": 35,
-  "name": "Le grand hall",
-  "idea": "7 vaches, 2 ovnis, 2 paires de portes et 5 flèches : chacune compte.",
+  "name": { "fr": "Le grand hall", "en": "The Great Hall" },
+  "idea": { "fr": "7 vaches, 2 ovnis, 2 paires de portes et 5 flèches : chacune compte.", "en": "7 cows, 2 UFOs, 2 pairs of doors and 5 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . .|. . . . . .|",

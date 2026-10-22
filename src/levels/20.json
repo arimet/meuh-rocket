@@ -1,7 +1,7 @@
 {
   "id": 20,
-  "name": "L’évasion de Roswell",
-  "idea": "Tout ce que tu as appris, sur un seul plateau.",
+  "name": { "fr": "L’évasion de Roswell", "en": "The Roswell Escape" },
+  "idea": { "fr": "Tout ce que tu as appris, sur un seul plateau.", "en": "Everything you’ve learned, on a single board." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. 1 . . . O . . . . . .|",

@@ -1,7 +1,7 @@
 {
   "id": 8,
-  "name": "Le piège",
-  "idea": "Les ovnis suivent les flèches aussi : enferme-le entre deux flèches.",
+  "name": { "fr": "Le piège", "en": "The Trap" },
+  "idea": { "fr": "Les ovnis suivent les flèches aussi : enferme-le entre deux flèches.", "en": "UFOs follow arrows too: shut it in between two arrows." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

@@ -1,7 +1,7 @@
 {
   "id": 34,
-  "name": "Le réacteur",
-  "idea": "7 vaches, 1 paire de portes et 5 flèches : chacune compte.",
+  "name": { "fr": "Le réacteur", "en": "The Reactor" },
+  "idea": { "fr": "7 vaches, 1 paire de portes et 5 flèches : chacune compte.", "en": "7 cows, 1 pair of doors and 5 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . O . . .|",

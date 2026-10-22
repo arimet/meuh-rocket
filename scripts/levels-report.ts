@@ -23,8 +23,8 @@ if (files.length === 0) {
     const stock = Object.values(level.stock).reduce((a, b) => a + b, 0)
     return {
       id: level.id,
-      nom: level.name,
-      idée: level.idea,
+      name: level.name.en,
+      idea: level.idea.en,
       'min flèches': r.minArrows ?? '✗ insoluble',
       stock,
       solutions: r.solutions,

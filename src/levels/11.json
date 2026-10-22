@@ -1,7 +1,7 @@
 {
   "id": 11,
-  "name": "Le premier saut",
-  "idea": "Un téléporteur renvoie la vache par son jumeau, dans la même direction.",
+  "name": { "fr": "Le premier saut", "en": "The First Jump" },
+  "idea": { "fr": "Un téléporteur renvoie la vache par son jumeau, dans la même direction.", "en": "A teleporter sends the cow out of its twin, heading the same way." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

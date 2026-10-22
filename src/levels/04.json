@@ -1,7 +1,7 @@
 {
   "id": 4,
-  "name": "Le troupeau",
-  "idea": "Une flèche guide toutes les vaches qui passent dessus.",
+  "name": { "fr": "Le troupeau", "en": "The Herd" },
+  "idea": { "fr": "Une flèche guide toutes les vaches qui passent dessus.", "en": "An arrow guides every cow that walks over it." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. O . . . . . O O . . .|",

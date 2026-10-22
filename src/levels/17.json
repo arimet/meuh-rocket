@@ -1,7 +1,7 @@
 {
   "id": 17,
-  "name": "La transhumance",
-  "idea": "Sept vaches, deux paires de portes : trouve les passages qu’elles partagent.",
+  "name": { "fr": "La transhumance", "en": "Cattle Drive" },
+  "idea": { "fr": "Sept vaches, deux paires de portes : trouve les passages qu’elles partagent.", "en": "Seven cows, two pairs of doors: find the paths they share." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . 2 . O|",

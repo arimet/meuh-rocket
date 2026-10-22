@@ -1,7 +1,7 @@
 {
   "id": 36,
-  "name": "La ruée",
-  "idea": "10 vaches, 2 ovnis, 3 paires de portes et 5 flèches : chacune compte.",
+  "name": { "fr": "La ruée", "en": "The Rush" },
+  "idea": { "fr": "10 vaches, 2 ovnis, 3 paires de portes et 5 flèches : chacune compte.", "en": "10 cows, 2 UFOs, 3 pairs of doors and 5 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. O . . . . . . . . . .|",

@@ -1,7 +1,7 @@
 {
   "id": 2,
-  "name": "Le mur",
-  "idea": "Face à un mur, une vache tourne toute seule à droite.",
+  "name": { "fr": "Le mur", "en": "The Wall" },
+  "idea": { "fr": "Face à un mur, une vache tourne toute seule à droite.", "en": "Facing a wall, a cow turns right on its own." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . .|. . . . .|",

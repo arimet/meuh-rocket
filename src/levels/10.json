@@ -1,7 +1,7 @@
 {
   "id": 10,
-  "name": "La grande évasion",
-  "idea": "Murs, trous, ovnis et tout le troupeau : à toi de jouer.",
+  "name": { "fr": "La grande évasion", "en": "The Great Escape" },
+  "idea": { "fr": "Murs, trous, ovnis et tout le troupeau : à toi de jouer.", "en": "Walls, holes, UFOs and the whole herd: your turn." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . .|. . . .|",

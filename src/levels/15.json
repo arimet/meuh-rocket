@@ -1,7 +1,7 @@
 {
   "id": 15,
-  "name": "Passager clandestin",
-  "idea": "Les ovnis prennent aussi les téléporteurs.",
+  "name": { "fr": "Passager clandestin", "en": "Stowaway" },
+  "idea": { "fr": "Les ovnis prennent aussi les téléporteurs.", "en": "UFOs take the teleporters too." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . 1 . . . . . . . .|",

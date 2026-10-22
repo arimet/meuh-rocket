@@ -1,4 +1,5 @@
 import type { Dir } from '../sim/types'
+import { t } from './i18n'
 import { icon } from './icons'
 
 export function clampToViewport(x: number, y: number, size: number, vw: number, vh: number, margin: number) {
@@ -7,7 +8,6 @@ export function clampToViewport(x: number, y: number, size: number, vw: number, 
   return { x: clamp(x, vw), y: clamp(y, vh) }
 }
 
-const LABEL: Record<Dir, string> = { N: 'Flèche vers le haut', E: 'Flèche vers la droite', S: 'Flèche vers le bas', W: 'Flèche vers la gauche' }
 export const PICKER_SIZE = 156
 
 // Four direction buttons around the tapped tile.
@@ -19,7 +19,6 @@ export function createPicker(root: HTMLElement, onPick: (dir: Dir) => void) {
   for (const d of ['N', 'E', 'S', 'W'] as Dir[]) {
     const b = document.createElement('button')
     b.className = `block picker-${d}`
-    b.setAttribute('aria-label', LABEL[d])
     b.innerHTML = `${icon('arrow', `dir-${d}`)}<span class="count"></span>`
     b.addEventListener('pointerdown', e => e.stopPropagation())
     b.addEventListener('click', e => { e.stopPropagation(); if (!b.disabled) onPick(d) })
@@ -40,6 +39,7 @@ export function createPicker(root: HTMLElement, onPick: (dir: Dir) => void) {
       el.style.setProperty('--ox', `${x - p.x}px`)
       el.style.setProperty('--oy', `${y - p.y}px`)
       for (const d of Object.keys(buttons) as Dir[]) {
+        buttons[d].setAttribute('aria-label', t().arrow(d))
         buttons[d].disabled = enabled[d] <= 0
         buttons[d].querySelector('.count')!.textContent = String(Math.max(0, enabled[d]))
       }

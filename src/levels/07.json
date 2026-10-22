@@ -1,7 +1,7 @@
 {
   "id": 7,
-  "name": "La grande traite",
-  "idea": "Huit vaches, trois flèches : trouve les passages qu’elles partagent.",
+  "name": { "fr": "La grande traite", "en": "Milking Time" },
+  "idea": { "fr": "Huit vaches, trois flèches : trouve les passages qu’elles partagent.", "en": "Eight cows, three arrows: find the paths they share." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

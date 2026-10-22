@@ -1,7 +1,7 @@
 {
   "id": 5,
-  "name": "La soucoupe",
-  "idea": "Un ovni enlève toute vache qu’il croise : fais-la passer ailleurs.",
+  "name": { "fr": "La soucoupe", "en": "The Saucer" },
+  "idea": { "fr": "Un ovni enlève toute vache qu’il croise : fais-la passer ailleurs.", "en": "A UFO beams up any cow it meets: send it another way." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

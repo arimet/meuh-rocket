@@ -1,7 +1,7 @@
 {
   "id": 21,
-  "name": "Réveil à bord",
-  "idea": "7 vaches, 1 ovni, 1 paire de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "Réveil à bord", "en": "Waking Up Aboard" },
+  "idea": { "fr": "7 vaches, 1 ovni, 1 paire de portes et 4 flèches : chacune compte.", "en": "7 cows, 1 UFO, 1 pair of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|.|. . . . . O . . . . .|",

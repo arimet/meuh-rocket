@@ -1,7 +1,7 @@
 {
   "id": 30,
-  "name": "Les capsules",
-  "idea": "9 vaches, 3 ovnis, 3 paires de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "Les capsules", "en": "The Pods" },
+  "idea": { "fr": "9 vaches, 3 ovnis, 3 paires de portes et 4 flèches : chacune compte.", "en": "9 cows, 3 UFOs, 3 pairs of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . O . . . . . . O|",

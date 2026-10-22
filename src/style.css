@@ -210,6 +210,7 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 
 /* ---------- arrow picker ---------- */
 #ui > .picker { pointer-events: none; } /* only the blocks catch taps, not the gaps between them */
+.lang { position: fixed; top: max(14px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); z-index: 6; height: 44px; padding-top: 0; padding-bottom: 5px; filter: drop-shadow(0 8px 10px #0009); }
 .picker { position: fixed; width: 156px; height: 156px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; filter: drop-shadow(0 8px 10px #000b); }
 .picker .block { position: absolute; width: 54px; height: 54px; padding: 0 0 6px; --depth: 6px; pointer-events: auto; touch-action: manipulation; font-size: 28px; }
 .picker .block .icon { color: var(--sky-arrow); filter: drop-shadow(0 2px 0 var(--sky-arrow-side)); }

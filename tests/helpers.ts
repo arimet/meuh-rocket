@@ -9,8 +9,8 @@ export function lvl(
 ): Level {
   return parseLevel({
     id: 0,
-    name: 'test',
-    idea: 'test',
+    name: { fr: 'test', en: 'test' },
+    idea: { fr: 'test', en: 'test' },
     grid,
     cows: extra.cows ?? [],
     ufos: extra.ufos ?? [],

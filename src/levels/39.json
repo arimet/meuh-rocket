@@ -1,7 +1,7 @@
 {
   "id": 39,
-  "name": "La dernière porte",
-  "idea": "10 vaches, 1 ovni, 1 paire de portes et 6 flèches : chacune compte.",
+  "name": { "fr": "La dernière porte", "en": "The Last Door" },
+  "idea": { "fr": "10 vaches, 1 ovni, 1 paire de portes et 6 flèches : chacune compte.", "en": "10 cows, 1 UFO, 1 pair of doors and 6 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. .|. . 1 . . . . . .|.|",

@@ -1,7 +1,7 @@
 {
   "id": 3,
-  "name": "Le trou",
-  "idea": "Une vache qui tombe dans un trou est perdue : contourne-le.",
+  "name": { "fr": "Le trou", "en": "The Hole" },
+  "idea": { "fr": "Une vache qui tombe dans un trou est perdue : contourne-le.", "en": "A cow that falls into a hole is lost: steer around it." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

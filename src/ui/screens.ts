@@ -1,5 +1,6 @@
 import type { World } from '../levels'
 import type { Dir, Level } from '../sim/types'
+import { type Lang, type Text, getLang, pick, t } from './i18n'
 import { icon } from './icons'
 import type { Progress } from './progress'
 
@@ -13,9 +14,8 @@ export interface ScreenHandlers {
   onSolution(): void
   onSpeed(): void
   onWorld(world: World): void // the select screen now shows this world
+  onLang(lang: Lang): void // texts outside the screens (sound button) follow
 }
-
-const DIR_LABEL: Record<Dir, string> = { N: 'haut', E: 'droite', S: 'bas', W: 'gauche' }
 
 const h = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = '') => {
   const el = document.createElement(tag)
@@ -41,7 +41,7 @@ const hanging = (cls: string, ...children: HTMLElement[]) => {
 const starRow = (n: number, cls = 'stars') => {
   const el = h('div', cls)
   el.innerHTML = [0, 1, 2].map(k => icon('star', k < n ? 'on' : 'off')).join('')
-  el.setAttribute('aria-label', `${n} étoile${n > 1 ? 's' : ''} sur 3`)
+  el.setAttribute('aria-label', t().stars(n))
   return el
 }
 const actions = (...children: HTMLElement[]) => {
@@ -60,8 +60,9 @@ const replay = (el: HTMLElement, cls: string) => {
 // DOM screens layered over the 3D canvas, dressed as farm signs and wooden blocks.
 export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   const title = h('section', 'screen title')
-  const note = h('p', 'paper', 'Guide les vaches jusqu’à la fusée avant que les ovnis ne les enlèvent.')
-  title.append(hanging('big', h('h1', 'logo', 'Meuh Rocket!')), note, actions(button('Jouer', 'red big', on.onPlay, icon('play'))))
+  const note = h('p', 'paper')
+  const play = button('', 'red big', on.onPlay, icon('play'))
+  title.append(hanging('big', h('h1', 'logo', 'Meuh Rocket!')), note, actions(play))
 
   const select = h('section', 'screen select')
   const grid = h('div', 'crates')
@@ -69,8 +70,6 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   const worldTitle = h('h2', '', '')
   const prevWorld = button('', 'small world-prev', () => shownSelect?.(-1), icon('arrow', 'dir-W'))
   const nextWorld = button('', 'small world-next', () => shownSelect?.(1), icon('arrow', 'dir-E'))
-  prevWorld.setAttribute('aria-label', 'Monde précédent')
-  nextWorld.setAttribute('aria-label', 'Monde suivant')
   const worldBar = h('div', 'world-bar')
   worldBar.append(prevWorld, hanging('', worldTitle), nextWorld)
   const worldLocked = h('p', 'paper world-locked', '')
@@ -81,7 +80,6 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   const hud = h('section', 'hud')
   const top = h('header', 'hud-top')
   const plate = h('button', 'plate')
-  plate.setAttribute('aria-label', 'Afficher la consigne')
   const plateNum = h('span', 'plate-num')
   const plateName = h('span', 'plate-name')
   plate.append(plateNum, plateName)
@@ -98,7 +96,6 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   }
   plate.addEventListener('click', () => showIdea(!idea.classList.contains('open')))
   const stock = h('div', 'stock')
-  stock.setAttribute('aria-label', 'Flèches restantes')
   const chips = {} as Record<Dir, { el: HTMLElement; count: HTMLElement; value: number }>
   for (const d of ['N', 'E', 'S', 'W'] as Dir[]) {
     const el = h('span', 'tag')
@@ -109,21 +106,18 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
     chips[d] = { el, count, value: -1 }
   }
   // arrow controls sit together: the stock, and the button that empties the board back into it
-  const clear = button('Retirer les flèches', 'small clear', on.onClear, icon('clear'))
-  clear.setAttribute('aria-label', 'Retirer les flèches')
-  const solution = button('Solution', 'small solution', () => openConfirm(), icon('bulb'))
-  solution.setAttribute('aria-label', 'Afficher la solution')
+  const clear = button('', 'small clear', on.onClear, icon('clear'))
+  const solution = button('', 'small solution', () => openConfirm(), icon('bulb'))
   const arrows = h('div', 'hud-arrows')
   arrows.append(stock, clear, solution)
-  const menu = button('Menu', 'small menu', on.onMenu, icon('menu'))
-  menu.setAttribute('aria-label', 'Menu')
+  const menu = button('', 'small menu', on.onMenu, icon('menu'))
   const extra = h('div', 'hud-extra')
   extra.append(menu)
   top.append(info, arrows, extra)
   const bar = h('footer', 'hud-bar')
-  const launch = button('Lancer', 'red launch', on.onLaunch, icon('play'))
-  const speed = button('×1', 'small speed', on.onSpeed, icon('fast'))
-  speed.setAttribute('aria-label', 'Vitesse ×1 (touche F)')
+  const launch = button('', 'red launch', on.onLaunch, icon('play'))
+  let running = false, speedN = 1
+  const speed = button('', 'small speed', on.onSpeed, icon('fast'))
   bar.append(launch, speed)
   hud.append(top, bar)
 
@@ -131,29 +125,77 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   let vStars: HTMLElement = h('div', 'stars')
   const vTitle = h('h2', 'logo')
   const vText = h('p', 'paper')
-  const vNext = button('Niveau suivant', 'red big', on.onNext, icon('play'))
+  const vNext = button('', 'red big', on.onNext, icon('play'))
+  const vMenu = button('', '', on.onMenu, icon('menu'))
   const vSignWrap = hanging('big', vStars, vTitle)
   const vSign = vSignWrap.querySelector('.sign') as HTMLElement
-  victory.append(vSignWrap, vText, actions(button('Menu', '', on.onMenu, icon('menu')), vNext))
+  victory.append(vSignWrap, vText, actions(vMenu, vNext))
 
   // confirmation before revealing the solution: it costs the level's stars
   // a native modal dialog: it traps focus and closes on Escape
   const confirm = h('dialog', 'dialog')
   confirm.setAttribute('aria-labelledby', 'confirm-title')
-  const cTitle = h('h2', '', 'Afficher la solution\u00a0?')
+  const cTitle = h('h2')
   cTitle.id = 'confirm-title'
-  const cYes = button('Afficher', 'red', () => { closeConfirm(); on.onSolution() }, icon('bulb'))
-  const cNo = button('Annuler', '', () => closeConfirm())
-  confirm.append(hanging('', cTitle), h('p', 'paper', 'Tu pourras toujours finir le niveau, mais tu ne gagneras pas d’étoile cette fois.'), actions(cNo, cYes))
+  const cYes = button('', 'red', () => { closeConfirm(); on.onSolution() }, icon('bulb'))
+  const cNo = button('', '', () => closeConfirm())
+  const cText = h('p', 'paper')
+  confirm.append(hanging('', cTitle), cText, actions(cNo, cYes))
   const openConfirm = () => { confirm.showModal(); cYes.focus() }
   const closeConfirm = () => confirm.close()
   confirm.addEventListener('close', () => solution.focus())
   confirm.addEventListener('click', e => { if (e.target === confirm) closeConfirm() })
 
-  const portrait = h('div', 'portrait paper', 'Tourne ton téléphone pour jouer')
-  root.append(title, select, hud, victory, confirm, portrait)
+  const portrait = h('div', 'portrait paper')
+  // language switch, on the title and select screens only
+  const lang = button('', 'small lang', () => {
+    const next: Lang = getLang() === 'fr' ? 'en' : 'fr'
+    on.onLang(next)
+    paint()
+    if (select.classList.contains('on')) shownSelect?.(0)
+  }, icon('globe'))
+  root.append(title, select, hud, victory, confirm, portrait, lang)
   const all = [title, select, hud, victory]
-  const only = (el: HTMLElement) => all.forEach(s => s.classList.toggle('on', s === el))
+  const only = (el: HTMLElement) => {
+    all.forEach(s => s.classList.toggle('on', s === el))
+    lang.hidden = el !== title && el !== select
+  }
+  const label = (b: HTMLElement, text: string, aria = text) => {
+    b.querySelector('.label')!.textContent = text
+    b.setAttribute('aria-label', aria)
+  }
+  let shownLevel: Level | null = null
+
+  // every fixed text, in the current language
+  function paint() {
+    const s = t()
+    note.textContent = s.tagline
+    label(play, s.play)
+    label(lang, s.switchTo, s.switchLabel)
+    prevWorld.setAttribute('aria-label', s.prevWorld)
+    nextWorld.setAttribute('aria-label', s.nextWorld)
+    plate.setAttribute('aria-label', s.showHint)
+    stock.setAttribute('aria-label', s.arrowsLeft)
+    label(clear, s.clear)
+    label(solution, s.solution, s.showSolution)
+    label(menu, s.menu)
+    label(launch, running ? s.stop : s.launch)
+    label(speed, `×${speedN}`, s.speed(speedN))
+    label(vNext, s.nextLevel)
+    label(vMenu, s.menu)
+    cTitle.textContent = s.confirmTitle
+    cText.textContent = s.confirmText
+    label(cYes, s.confirmYes)
+    label(cNo, s.cancel)
+    portrait.textContent = s.portrait
+    if (shownLevel) {
+      plateNum.textContent = s.level(shownLevel.id)
+      plateName.textContent = pick(shownLevel.name)
+      idea.textContent = pick(shownLevel.idea)
+    }
+    for (const c of Object.values(chips)) c.value = -1 // stock labels are rebuilt on the next update
+  }
+  paint()
 
   return {
     hudExtra: extra,
@@ -169,13 +211,13 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
       }
       const world = worlds[worldIndex]
       on.onWorld(world)
-      worldTitle.textContent = `Monde ${world.id} · ${world.name}`
+      worldTitle.textContent = t().world(world.id, pick(world.name))
       prevWorld.disabled = worldIndex === 0
       nextWorld.disabled = worldIndex === worlds.length - 1
       const levels = all.filter(l => worldOf(l.id) === world)
       const closed = levels.length > 0 && levels[0].id > progress.unlocked
       worldLocked.hidden = !closed
-      worldLocked.textContent = closed ? `Termine le monde ${world.id - 1} pour ouvrir ${world.name}.` : ''
+      worldLocked.textContent = closed ? t().worldLocked(world.id - 1, pick(world.name)) : ''
       grid.replaceChildren(...levels.map((l, i) => {
         const locked = l.id > progress.unlocked
         const done = progress.completed.includes(l.id)
@@ -184,27 +226,25 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
         b.style.setProperty('--i', String(i))
         b.disabled = locked
         b.innerHTML = locked ? icon('lock', 'crate-lock') : `<span class="crate-num">${l.id}</span>`
-        if (!locked) b.append(h('span', 'crate-name', l.name))
+        if (!locked) b.append(h('span', 'crate-name', pick(l.name)))
         const stars = progress.stars[l.id] ?? 0
         if (done) b.append(starRow(stars, 'crate-stars'))
-        b.setAttribute('aria-label', `Niveau ${l.id} : ${locked ? 'verrouillé' : l.name}${done ? `, réussi, ${stars} étoile${stars > 1 ? 's' : ''}` : ''}`)
+        b.setAttribute('aria-label', t().crate(l.id, locked ? null : pick(l.name), done ? stars : null))
         b.addEventListener('click', () => { if (!locked) on.onSelect(l.id) })
         return b
       }))
       only(select)
     },
     showHud(level: Level) {
-      plateNum.textContent = `Niveau ${level.id}`
-      plateName.textContent = level.name
-      idea.textContent = level.idea
-      for (const c of Object.values(chips)) c.value = -1
+      shownLevel = level
+      paint()
       only(hud)
       showIdea(true)
     },
     foldIdea: () => showIdea(false),
     setSpeed(n: number) {
-      speed.querySelector('.label')!.textContent = `×${n}`
-      speed.setAttribute('aria-label', `Vitesse ×${n} (touche F)`)
+      speedN = n
+      label(speed, `×${n}`, t().speed(n))
       speed.classList.toggle('on', n > 1)
     },
     updateHud(s: { remaining: Record<Dir, number>; running: boolean; busy: boolean }) {
@@ -215,22 +255,24 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
         c.value = n
         c.count.textContent = String(n)
         c.el.classList.toggle('empty', n === 0)
-        c.el.setAttribute('aria-label', `${n} flèche${n > 1 ? 's' : ''} vers le ${DIR_LABEL[d]}`)
+        c.el.setAttribute('aria-label', t().arrowStock(n, d))
       }
+      running = s.running
       launch.innerHTML = icon(s.running ? 'stop' : 'play')
-      launch.append(h('span', 'label', s.running ? 'Stop' : 'Lancer'))
+      launch.append(h('span', 'label'))
+      label(launch, s.running ? t().stop : t().launch)
       launch.classList.toggle('running', s.running)
       launch.disabled = s.busy && !s.running
       clear.disabled = s.busy
       solution.disabled = s.busy
     },
-    showVictory(r: { excellent: boolean; hasNext: boolean; stars: number; usedSolution: boolean; worldDone?: string }) {
+    showVictory(r: { excellent: boolean; hasNext: boolean; stars: number; usedSolution: boolean; worldDone?: Text }) {
       vStars.replaceWith(starRow(r.stars))
       vStars = vSign.querySelector('.stars') as HTMLElement
-      vTitle.textContent = r.usedSolution ? 'Mission accomplie' : r.excellent ? 'Excellent\u00a0!' : 'Bravo\u00a0!'
-      const line = r.usedSolution ? 'Solution utilisée : pas d’étoile cette fois.'
-        : r.excellent ? 'Toutes les vaches sont à bord, avec moins de flèches que prévu.' : 'Toutes les vaches sont à bord.'
-      vText.textContent = r.worldDone ? `${line} Monde terminé ! Direction ${r.worldDone}.` : r.hasNext ? line : `${line} Monde terminé !`
+      const s = t()
+      vTitle.textContent = r.usedSolution ? s.missionDone : r.excellent ? s.excellent : s.wellDone
+      const line = r.usedSolution ? s.usedSolution : r.excellent ? s.aboardFewer : s.aboard
+      vText.textContent = r.worldDone ? `${line} ${s.worldDone(pick(r.worldDone))}` : r.hasNext ? line : `${line} ${s.worldDone(null)}`
       vNext.hidden = !r.hasNext
       only(victory)
     },

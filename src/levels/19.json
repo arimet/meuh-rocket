@@ -1,7 +1,7 @@
 {
   "id": 19,
-  "name": "Escorte",
-  "idea": "Deux ovnis rôdent autour des portes.",
+  "name": { "fr": "Escorte", "en": "Escort" },
+  "idea": { "fr": "Deux ovnis rôdent autour des portes.", "en": "Two UFOs prowl around the doors." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. 2 . . . . . . . . R .|",

@@ -1,7 +1,7 @@
 {
   "id": 33,
-  "name": "Embouteillage",
-  "idea": "12 vaches, 3 ovnis, 2 paires de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "Embouteillage", "en": "Gridlock" },
+  "idea": { "fr": "12 vaches, 3 ovnis, 2 paires de portes et 4 flèches : chacune compte.", "en": "12 cows, 3 UFOs, 2 pairs of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . O . . . . . .|",

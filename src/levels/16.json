@@ -1,7 +1,7 @@
 {
   "id": 16,
-  "name": "Le piège de Roswell",
-  "idea": "Enferme l’ovni dans une boucle pour libérer la route.",
+  "name": { "fr": "Le piège de Roswell", "en": "The Roswell Trap" },
+  "idea": { "fr": "Enferme l’ovni dans une boucle pour libérer la route.", "en": "Lock the UFO in a loop to clear the way." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

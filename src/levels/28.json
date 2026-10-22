@@ -1,7 +1,7 @@
 {
   "id": 28,
-  "name": "Le pont inférieur",
-  "idea": "10 vaches, 3 ovnis, 2 paires de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "Le pont inférieur", "en": "The Lower Deck" },
+  "idea": { "fr": "10 vaches, 3 ovnis, 2 paires de portes et 4 flèches : chacune compte.", "en": "10 cows, 3 UFOs, 2 pairs of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . 2 . . . . . . . . .|",

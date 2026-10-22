@@ -66,13 +66,15 @@ describe('levels', () => {
     LEVELS.forEach((l, i) => {
       expect(l.id).toBe(i + 1)
       expect([l.width, l.height]).toEqual([12, 9])
-      expect(l.name).not.toBe('')
-      expect(l.idea).not.toBe('')
+      for (const lang of ['fr', 'en'] as const) {
+        expect(l.name[lang]).not.toBe('')
+        expect(l.idea[lang]).not.toBe('')
+      }
     })
   })
 
   for (const level of LEVELS) {
-    describe(`level ${level.id} (${level.name})`, () => {
+    describe(`level ${level.id} (${level.name.en})`, () => {
       it('stores a winning solution within its stock', () => {
         const sol = level.solution!
         expect(sol).toBeDefined()

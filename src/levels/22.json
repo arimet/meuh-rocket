@@ -1,7 +1,7 @@
 {
   "id": 22,
-  "name": "Les couloirs",
-  "idea": "8 vaches, 2 paires de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "Les couloirs", "en": "The Corridors" },
+  "idea": { "fr": "8 vaches, 2 paires de portes et 4 flèches : chacune compte.", "en": "8 cows, 2 pairs of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . O . . .|",

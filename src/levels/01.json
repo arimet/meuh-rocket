@@ -1,7 +1,7 @@
 {
   "id": 1,
-  "name": "Premier pas",
-  "idea": "Pose une flèche pour guider la vache jusqu’à la fusée.",
+  "name": { "fr": "Premier pas", "en": "First Steps" },
+  "idea": { "fr": "Pose une flèche pour guider la vache jusqu’à la fusée.", "en": "Place an arrow to guide the cow to the rocket." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

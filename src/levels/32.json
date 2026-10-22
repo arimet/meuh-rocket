@@ -1,7 +1,7 @@
 {
   "id": 32,
-  "name": "La salle des cartes",
-  "idea": "11 vaches, 3 ovnis, 3 paires de portes et 4 flèches : chacune compte.",
+  "name": { "fr": "La salle des cartes", "en": "The Map Room" },
+  "idea": { "fr": "11 vaches, 3 ovnis, 3 paires de portes et 4 flèches : chacune compte.", "en": "11 cows, 3 UFOs, 3 pairs of doors and 4 arrows: every one counts." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. 3|. . . . . . O . . .|",

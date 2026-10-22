@@ -1,7 +1,7 @@
 {
   "id": 13,
-  "name": "Sortie de secours",
-  "idea": "À la sortie d’un téléporteur, un mur fait tourner la vache comme d’habitude.",
+  "name": { "fr": "Sortie de secours", "en": "Emergency Exit" },
+  "idea": { "fr": "À la sortie d’un téléporteur, un mur fait tourner la vache comme d’habitude.", "en": "Coming out of a teleporter, a wall turns the cow as usual." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",

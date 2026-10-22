@@ -1,7 +1,7 @@
 {
   "id": 14,
-  "name": "Deux couleurs",
-  "idea": "Chaque couleur a son jumeau : ne te trompe pas de porte.",
+  "name": { "fr": "Deux couleurs", "en": "Two Colours" },
+  "idea": { "fr": "Chaque couleur a son jumeau : ne te trompe pas de porte.", "en": "Each colour has its twin: don’t take the wrong door." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . 2 . . .|",

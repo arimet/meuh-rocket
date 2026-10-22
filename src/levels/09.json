@@ -1,7 +1,7 @@
 {
   "id": 9,
-  "name": "Deux soucoupes",
-  "idea": "Deux ovnis, deux passages : trouve le bon moment pour chacun.",
+  "name": { "fr": "Deux soucoupes", "en": "Two Saucers" },
+  "idea": { "fr": "Deux ovnis, deux passages : trouve le bon moment pour chacun.", "en": "Two UFOs, two passes: find the right moment for each." },
   "grid": [
     "+-+-+-+-+-+-+-+-+-+-+-+-+",
     "|. . . . . . . . . . . .|",
