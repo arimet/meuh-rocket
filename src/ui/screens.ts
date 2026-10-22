@@ -1,3 +1,4 @@
+import type { World } from '../levels'
 import type { Dir, Level } from '../sim/types'
 import { icon } from './icons'
 import type { Progress } from './progress'
@@ -11,6 +12,7 @@ export interface ScreenHandlers {
   onNext(): void
   onSolution(): void
   onSpeed(): void
+  onWorld(world: World): void // the select screen now shows this world
 }
 
 const DIR_LABEL: Record<Dir, string> = { N: 'haut', E: 'droite', S: 'bas', W: 'gauche' }
@@ -63,7 +65,18 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
 
   const select = h('section', 'screen select')
   const grid = h('div', 'crates')
-  select.append(hanging('', h('h2', '', 'Monde 1 · La ferme')), grid)
+  // one world at a time, with arrows to flip between them
+  const worldTitle = h('h2', '', '')
+  const prevWorld = button('', 'small world-prev', () => shownSelect?.(-1), icon('arrow', 'dir-W'))
+  const nextWorld = button('', 'small world-next', () => shownSelect?.(1), icon('arrow', 'dir-E'))
+  prevWorld.setAttribute('aria-label', 'Monde précédent')
+  nextWorld.setAttribute('aria-label', 'Monde suivant')
+  const worldBar = h('div', 'world-bar')
+  worldBar.append(prevWorld, hanging('', worldTitle), nextWorld)
+  const worldLocked = h('p', 'paper world-locked', '')
+  select.append(worldBar, grid, worldLocked)
+  let shownSelect: ((step: number) => void) | null = null
+  let worldIndex = -1
 
   const hud = h('section', 'hud')
   const top = h('header', 'hud-top')
@@ -146,7 +159,22 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   return {
     hudExtra: extra,
     showTitle: () => only(title),
-    showSelect(levels: Level[], progress: Progress) {
+    showSelect(all: Level[], progress: Progress, worlds: World[], worldOf: (id: number) => World) {
+      // open on the world of the most advanced playable level, then keep the player's choice
+      if (worldIndex < 0) worldIndex = worlds.indexOf(worldOf(Math.min(progress.unlocked, all.at(-1)?.id ?? 1)))
+      shownSelect = step => {
+        worldIndex = Math.max(0, Math.min(worlds.length - 1, worldIndex + step))
+        this.showSelect(all, progress, worlds, worldOf)
+      }
+      const world = worlds[worldIndex]
+      on.onWorld(world)
+      worldTitle.textContent = `Monde ${world.id} · ${world.name}`
+      prevWorld.disabled = worldIndex === 0
+      nextWorld.disabled = worldIndex === worlds.length - 1
+      const levels = all.filter(l => worldOf(l.id) === world)
+      const closed = levels.length > 0 && levels[0].id > progress.unlocked
+      worldLocked.hidden = !closed
+      worldLocked.textContent = closed ? `Termine le monde ${world.id - 1} pour ouvrir ${world.name}.` : ''
       grid.replaceChildren(...levels.map((l, i) => {
         const locked = l.id > progress.unlocked
         const done = progress.completed.includes(l.id)
@@ -195,13 +223,13 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
       clear.disabled = s.busy
       solution.disabled = s.busy
     },
-    showVictory(r: { excellent: boolean; hasNext: boolean; stars: number; usedSolution: boolean }) {
+    showVictory(r: { excellent: boolean; hasNext: boolean; stars: number; usedSolution: boolean; worldDone?: string }) {
       vStars.replaceWith(starRow(r.stars))
       vStars = vSign.querySelector('.stars') as HTMLElement
       vTitle.textContent = r.usedSolution ? 'Mission accomplie' : r.excellent ? 'Excellent\u00a0!' : 'Bravo\u00a0!'
       const line = r.usedSolution ? 'Solution utilisée : pas d’étoile cette fois.'
         : r.excellent ? 'Toutes les vaches sont à bord, avec moins de flèches que prévu.' : 'Toutes les vaches sont à bord.'
-      vText.textContent = r.hasNext ? line : `${line} Monde terminé !`
+      vText.textContent = r.worldDone ? `${line} Monde terminé ! Direction ${r.worldDone}.` : r.hasNext ? line : `${line} Monde terminé !`
       vNext.hidden = !r.hasNext
       only(victory)
     },

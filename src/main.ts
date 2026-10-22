@@ -1,9 +1,13 @@
 import '@fontsource/pixelify-sans/500.css'
 import '@fontsource/pixelify-sans/700.css'
 import './style.css'
+import digitsFont from '@fontsource/pixelify-sans/files/pixelify-sans-latin-500-normal.woff2?url'
+
+// The bold cut draws 2 and 3 like 8: digits always use the regular cut, whatever the weight around them.
+document.fonts.add(new FontFace('Pixelify Digits', `url(${digitsFont})`, { unicodeRange: 'U+30-39', weight: '100 900' }))
 import { sfx, unlockAudio } from './audio/sfx'
 import { GameController, type Phase } from './game/controller'
-import { LEVELS } from './levels'
+import { LEVELS, WORLDS, worldOf } from './levels'
 import { BoardScene } from './render/boardScene'
 import { DIRS } from './sim/level'
 import { canPlace } from './sim/sim'
@@ -44,11 +48,13 @@ function startLevel(id: number) {
       await scene.launchRocket()
       if (game !== current || !playing) return // the player left during the lift-off
       sfx.win()
-      screens.showVictory({ excellent: r.excellent, hasNext: level.id < LEVELS.length, stars, usedSolution: game.usedSolution })
+      const next = LEVELS.find(l => l.id === level.id + 1)
+      const worldDone = next && worldOf(next.id) !== worldOf(level.id) ? worldOf(next.id).name : undefined
+      screens.showVictory({ excellent: r.excellent, hasNext: !!next, stars, usedSolution: game.usedSolution, worldDone })
     },
   })
   game.speed = speed
-  scene.loadLevel(level)
+  scene.loadLevel(level, worldOf(level.id).theme)
   scene.setArrows(game.arrows)
   playing = true
   screens.showHud(level)
@@ -65,13 +71,24 @@ function backdrop() {
 }
 
 const screens = createScreens(ui, {
-  onPlay: () => { backdrop(); screens.showSelect(LEVELS, progress) },
+  onPlay: () => { backdrop(); screens.showSelect(LEVELS, progress, WORLDS, worldOf) },
   onSelect: id => startLevel(id),
   onLaunch: () => { closePicker(); screens.foldIdea(); if (game.launch()) sfx.moo(); else game.stop() },
   onClear: () => { game.clear(); scene.setArrows(game.arrows); refreshHud() },
-  onMenu: () => { backdrop(); screens.showSelect(LEVELS, progress) },
+  onMenu: () => { backdrop(); screens.showSelect(LEVELS, progress, WORLDS, worldOf) },
   onNext: () => startLevel(level.id + 1),
   onSpeed: () => cycleSpeed(),
+  onWorld: world => {
+    // behind the select screen, show the first level of the world being browsed
+    if (playing || worldOf(level.id) === world) return
+    const first = LEVELS.find(l => worldOf(l.id) === world)
+    if (!first) return
+    level = first
+    game.dispose()
+    game = new GameController(level)
+    scene.loadLevel(level, world.theme)
+    scene.setArrows(game.arrows)
+  },
   onSolution: () => {
     closePicker()
     if (game.showSolution()) { scene.setArrows(game.arrows); refreshHud(); sfx.place() }

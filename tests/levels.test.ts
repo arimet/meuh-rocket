@@ -36,6 +36,30 @@ const IDEAS: Record<number, (l: Level, minArrows: number, example: Arrows) => vo
   10: (l) => { expect(holes(l)).toBeGreaterThan(0); expect(innerWall(l)).toBe(true); expect(l.ufos.length).toBeGreaterThan(0) },
 }
 
+// World 2 (Roswell): every level is solved through a teleporter, and teaches one more thing about them.
+const teleports = (l: Level, sol: Arrows) => run(l, sol).events.filter(e => e.type === 'teleport')
+const cowJumps = (l: Level, sol: Arrows) => teleports(l, sol).filter(e => l.cows[e.actor])
+const pairs = (l: Level) => l.portals.filter((t, i) => t > i).length
+const W2: Record<number, (l: Level, sol: Arrows) => void> = {
+  11: (l) => { expect(pairs(l)).toBe(1); expect(l.ufos).toHaveLength(0) },
+  12: (l) => { expect(pairs(l)).toBe(1); expect(total(l)).toBeGreaterThanOrEqual(2) },
+  13: (l, sol) => {
+    // a teleported cow comes out against a wall and turns
+    const r = run(l, sol)
+    expect(r.events.some(e => e.type === 'teleport' && l.cows[e.actor] && r.history[e.tick].actors[e.actor].dir !== r.history[e.tick - 1].actors[e.actor].dir)).toBe(true)
+  },
+  14: (l, sol) => { expect(pairs(l)).toBe(2); expect(new Set(teleports(l, sol).map(e => Math.min(e.cell!, e.to!))).size).toBe(2) },
+  15: (l, sol) => { expect(l.ufos.length).toBeGreaterThan(0); expect(teleports(l, sol).some(e => e.actor >= l.cows.length)).toBe(true) },
+  16: (l, sol) => {
+    const hits = run(l, sol).events.filter(e => e.type === 'arrow' && e.actor >= l.cows.length)
+    expect([...sol.keys()].some(c => hits.filter(e => e.cell === c).length >= 2)).toBe(true)
+  },
+  17: (l) => { expect(l.cows.length).toBeGreaterThanOrEqual(6) },
+  18: (l) => { expect(holes(l)).toBeGreaterThanOrEqual(7) },
+  19: (l) => { expect(l.ufos).toHaveLength(2) },
+  20: (l) => { expect(pairs(l)).toBeGreaterThanOrEqual(2); expect(l.ufos.length).toBeGreaterThan(0); expect(holes(l)).toBeGreaterThan(0); expect(total(l)).toBeGreaterThanOrEqual(3) },
+}
+
 describe('levels', () => {
   it('are 12×9 with ids 1..n in order', () => {
     expect(LEVELS.length).toBeGreaterThan(0)
@@ -63,6 +87,10 @@ describe('levels', () => {
         const r = solve(level)
         expect(r.solvable).toBe(true)
         IDEAS[level.id]?.(level, r.minArrows!, r.example!)
+        if (level.id > 10) {
+          expect(cowJumps(level, r.example!).length).toBeGreaterThan(0)
+          W2[level.id]?.(level, r.example!)
+        }
       }, 30_000)
     })
   }

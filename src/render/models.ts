@@ -1,47 +1,13 @@
 import * as THREE from 'three'
+import type { Theme } from '../levels'
 import type { Level } from '../sim/types'
 import { PALETTE } from './palette'
-import { VOXELS_PER_TILE as V, VoxelGrid, meshVoxels } from './voxel'
-
-type ColorName = keyof typeof PALETTE
-
-const NAMES = Object.keys(PALETTE) as ColorName[]
-const COLORS = ['', ...NAMES.map(n => PALETTE[n])]
-const C = (name: ColorName) => NAMES.indexOf(name) + 1
-
-const hash = (x: number, y: number, z = 0) => {
-  let h = (x * 374761393 + y * 668265263 + z * 2147483647) | 0
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
-}
-
-// Recolour solid voxels inside an ellipsoid (spots, patches, trims).
-function paint(g: VoxelGrid, cx: number, cy: number, cz: number, rx: number, ry: number, rz: number, c: number) {
-  for (let y = Math.floor(cy - ry); y <= cy + ry; y++)
-    for (let z = Math.floor(cz - rz); z <= cz + rz; z++)
-      for (let x = Math.floor(cx - rx); x <= cx + rx; x++)
-        if (g.get(x, y, z) && ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 + ((z - cz) / rz) ** 2 <= 1) g.set(x, y, z, c)
-}
-
-function disk(g: VoxelGrid, cx: number, y: number, cz: number, r: number, c: number) {
-  for (let z = Math.floor(cz - r); z <= cz + r; z++)
-    for (let x = Math.floor(cx - r); x <= cx + r; x++)
-      if ((x - cx) ** 2 + (z - cz) ** 2 <= r * r) g.set(x, y, z, c)
-}
-
-const mesh = (g: VoxelGrid, opts?: Parameters<typeof meshVoxels>[2]) => meshVoxels(g, COLORS, opts)
+import { VOXELS_PER_TILE as V, VoxelGrid } from './voxel'
+import { C, type ColorName, blob, disk, hash, mesh, paint, segDist, vnoise } from './voxelKit'
 
 // Actors use finer voxels than the board.
 const R = 24
 const actor = (g: VoxelGrid) => mesh(g, { voxelSize: 1 / R, jitter: 0.035 })
-
-// Rounded box: superellipsoid of power 4.
-function blob(g: VoxelGrid, cx: number, cy: number, cz: number, rx: number, ry: number, rz: number, c: number, p = 4) {
-  for (let y = Math.floor(cy - ry); y <= cy + ry; y++)
-    for (let z = Math.floor(cz - rz); z <= cz + rz; z++)
-      for (let x = Math.floor(cx - rx); x <= cx + rx; x++)
-        if (Math.abs((x - cx) / rx) ** p + Math.abs((y - cy) / ry) ** p + Math.abs((z - cz) / rz) ** p <= 1) g.set(x, y, z, c)
-}
 
 export const MATERIALS = {
   lit: new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }),
@@ -286,35 +252,44 @@ export function arrowGeometry(): THREE.BufferGeometry {
 }
 
 export const BOARD_MARGIN = 3 // voxels of field around the tiles
-const GROUND = 4 // voxels of earth under the grass top
+export const GROUND = 4 // voxels of earth under the grass top
 
 export function tileCenter(level: Level, x: number, y: number): THREE.Vector3 {
   return new THREE.Vector3(x - (level.width - 1) / 2, 0, y - (level.height - 1) / 2)
 }
 
+export interface BoardTheme {
+  tiles: [ColorName, ColorName]; speck: ColorName; line: ColorName; margin: ColorName
+  ground: [ColorName, ColorName, ColorName]; rim: ColorName; post: ColorName; rail: ColorName
+}
+export const BOARD_THEMES: Record<Theme, BoardTheme> = {
+  farm: { tiles: ['grass1', 'grass2'], speck: 'grass3', line: 'grassLine', margin: 'grass3', ground: ['soil', 'dirt', 'dirtDark'], rim: 'dirtDark', post: 'woodDark', rail: 'woodLight' },
+  desert: { tiles: ['sand1', 'sand2'], speck: 'sandSpeck', line: 'sandLine', margin: 'sandMargin', ground: ['clayDark', 'clay', 'rockRed'], rim: 'clayDark', post: 'steel', rail: 'steelLight' },
+}
+
 // The playing field as one chunk of earth: tiles, grid lines, holes, fences on walls.
-export function boardGeometry(level: Level): THREE.BufferGeometry {
+export function boardGeometry(level: Level, theme: BoardTheme = BOARD_THEMES.farm): THREE.BufferGeometry {
   const M = BOARD_MARGIN
   const sx = level.width * V + 2 * M, sz = level.height * V + 2 * M
   const g = new VoxelGrid(sx, GROUND + 10, sz)
   const top = GROUND - 1
 
   for (let z = 0; z < sz; z++) for (let x = 0; x < sx; x++) {
-    g.set(x, 0, z, C('soil'))
-    g.set(x, 1, z, hash(x, z, 1) < 0.5 ? C('dirtDark') : C('dirt'))
-    g.set(x, 2, z, hash(x, z, 2) < 0.3 ? C('dirtDark') : C('dirt'))
+    g.set(x, 0, z, C(theme.ground[0]))
+    g.set(x, 1, z, hash(x, z, 1) < 0.5 ? C(theme.ground[2]) : C(theme.ground[1]))
+    g.set(x, 2, z, hash(x, z, 2) < 0.3 ? C(theme.ground[2]) : C(theme.ground[1]))
     const tx = Math.floor((x - M) / V), ty = Math.floor((z - M) / V)
     const inside = tx >= 0 && ty >= 0 && tx < level.width && ty < level.height
     const lx = x - M - tx * V, lz = z - M - ty * V
     let c: number
-    if (!inside) c = C('grass3')
-    else if (lx === 0 || lz === 0) c = C('grassLine')
-    else c = (tx + ty) % 2 ? C('grass1') : C('grass2')
-    if (inside && c !== C('grassLine') && hash(x, z) < 0.06) c = C('grass3')
+    if (!inside) c = C(theme.margin)
+    else if (lx === 0 || lz === 0) c = C(theme.line)
+    else c = (tx + ty) % 2 ? C(theme.tiles[0]) : C(theme.tiles[1])
+    if (inside && c !== C(theme.line) && hash(x, z) < 0.06) c = C(theme.speck)
     g.set(x, top, z, c)
     // sparse tufts away from tile centres
     if (inside && hash(x, z, 7) < 0.012 && (lx < 4 || lx > 11 || lz < 4 || lz > 11) && lx > 1 && lz > 1 && lx < 14 && lz < 14)
-      g.set(x, top + 1, z, C('grass3'))
+      g.set(x, top + 1, z, C(theme.speck))
   }
 
   // holes
@@ -327,7 +302,7 @@ export function boardGeometry(level: Level): THREE.BufferGeometry {
         for (let y = 1; y <= top + 1; y++) g.set(x, y, z, 0)
         g.set(x, 0, z, C('hole'))
       } else if (d <= 6.4) {
-        g.set(x, top, z, C('dirtDark'))
+        g.set(x, top, z, C(theme.rim))
         g.set(x, top + 1, z, 0)
       }
     }
@@ -340,10 +315,10 @@ export function boardGeometry(level: Level): THREE.BufferGeometry {
     }
     for (let k = -1; k <= V; k++) {
       const post = k <= 0 || k >= V - 1
-      if (post) for (let y = GROUND; y <= GROUND + 6; y++) at(k, y, C('woodDark'))
+      if (post) for (let y = GROUND; y <= GROUND + 6; y++) at(k, y, C(theme.post))
       else {
-        at(k, GROUND + 2, C('woodLight'))
-        at(k, GROUND + 5, C('woodLight'))
+        at(k, GROUND + 2, C(theme.rail))
+        at(k, GROUND + 5, C(theme.rail))
       }
     }
   }
@@ -450,32 +425,6 @@ function bush(seed: number): THREE.BufferGeometry {
     if ((x - 5.5) ** 2 + ((y - 2) * 1.3) ** 2 + (z - 5.5) ** 2 <= 30 && hash(x, y, z + seed) > 0.1)
       g.set(x, y, z, hash(x, y, z + seed) < 0.35 ? C('leafDark') : C('leaf'))
   return mesh(g, { voxelSize: 1 / V, jitter: 0.06 })
-}
-
-// Smooth value noise in [0, 1).
-function vnoise(x: number, z: number, scale: number, seed: number) {
-  const gx = x / scale, gz = z / scale
-  const x0 = Math.floor(gx), z0 = Math.floor(gz)
-  const fx = gx - x0, fz = gz - z0
-  const sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz)
-  const a = hash(x0, z0, seed), b = hash(x0 + 1, z0, seed), c = hash(x0, z0 + 1, seed), d = hash(x0 + 1, z0 + 1, seed)
-  return a + (b - a) * sx + (c - a) * sz + (a - b - c + d) * sx * sz
-}
-
-const segDist = (px: number, pz: number, ax: number, az: number, bx: number, bz: number) => {
-  const dx = bx - ax, dz = bz - az
-  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / (dx * dx + dz * dz)))
-  return Math.hypot(px - ax - t * dx, pz - az - t * dz)
-}
-
-const decorCache = new Map<string, THREE.Group>()
-
-// The decor only depends on the board size: build it once and reuse it across levels.
-export function farmDecorFor(level: Level): THREE.Group {
-  const key = `${level.width}x${level.height}`
-  let decor = decorCache.get(key)
-  if (!decor) decorCache.set(key, (decor = farmDecor(level)))
-  return decor
 }
 
 // Night farm around the board. Everything stays outside the playing field so the grid reads clearly.

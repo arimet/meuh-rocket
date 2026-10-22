@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 import { disposeTree } from '../src/render/dispose'
-import { farmDecorFor } from '../src/render/models'
+import { decorFor } from '../src/render/decor'
 import { lvl } from './helpers'
 
 describe('disposeTree', () => {
@@ -20,10 +20,11 @@ describe('disposeTree', () => {
   })
 })
 
-describe('farmDecorFor', () => {
-  it('builds the decor once per board size', () => {
+describe('decorFor', () => {
+  it('builds the decor once per theme and board size', () => {
     const a = lvl(['+-+-+', '|. R|', '+-+-+'])
     const b = lvl(['+-+-+', '|R .|', '+-+-+'])
-    expect(farmDecorFor(a)).toBe(farmDecorFor(b))
+    expect(decorFor(a, 'farm')).toBe(decorFor(b, 'farm'))
+    expect(decorFor(a, 'desert')).not.toBe(decorFor(a, 'farm'))
   })
 })

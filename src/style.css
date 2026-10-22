@@ -19,10 +19,11 @@
   --notch: 5px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-pop: cubic-bezier(0.25, 1.25, 0.5, 1); /* blocks settle like wood landing, a deliberate small overshoot */
-  --font: 'Pixelify Sans', system-ui, sans-serif;
+  --font: 'Pixelify Digits', 'Pixelify Sans', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; } /* .block and friends set display, which would beat the attribute */
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--night); color: var(--cream); font: 500 16px/1.3 var(--font); -webkit-font-smoothing: antialiased; }
 ::selection { background: var(--barn); color: var(--cream); }
 #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -141,6 +142,12 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .icon.off { color: #5a4030; }
 .crate.next::after { content: ''; position: absolute; inset: 0; box-shadow: inset 0 0 0 3px var(--hay); animation: beacon 1.6s ease-in-out infinite; }
 @keyframes beacon { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+
+/* world switcher */
+.world-bar { display: flex; align-items: center; gap: 14px; filter: drop-shadow(0 8px 10px #0009); }
+.world-bar > .block { width: 52px; height: 52px; padding: 0 0 6px; font-size: 24px; }
+.world-bar > .block .icon { color: var(--cream); }
+.world-locked { max-width: 34ch; }
 
 /* victory */
 .stars { display: flex; justify-content: center; gap: 10px; margin-bottom: 10px; font-size: 40px; color: var(--hay); }

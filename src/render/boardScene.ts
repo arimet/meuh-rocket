@@ -3,12 +3,17 @@ import type { Frame } from '../game/controller'
 import { TILE } from '../sim/constants'
 import type { Actor, Arrows, Dir, Level } from '../sim/types'
 import {
-  BOARD_MARGIN, MATERIALS, arrowGeometry, boardGeometry, createCow, createUfo, farmDecorFor, rocketGeometry, tileCenter, ufoBeam,
+  BOARD_MARGIN, BOARD_THEMES, MATERIALS, arrowGeometry, boardGeometry, createCow, createUfo, rocketGeometry, tileCenter, ufoBeam,
 } from './models'
+import type { Theme } from '../levels'
+import { DELTA } from '../sim/level'
+import { COW_SPEED, UFO_SPEED } from '../sim/constants'
+import { decorFor } from './decor'
 import { createDiorama } from './diorama'
+import { PORTAL_COLORS, createPortal } from './portal'
 import { disposeTree } from './dispose'
 import { detectQuality } from './quality'
-import { createStage } from './stage'
+import { SKY, createStage } from './stage'
 import { type Pose, gait } from './gait'
 import { VOXELS_PER_TILE } from './voxel'
 
@@ -62,6 +67,7 @@ export class BoardScene {
   private lastPos: THREE.Vector2[] = []
   private decor: THREE.Group | null = null
   private board: THREE.Mesh | null = null
+  private portals = new Map<number, THREE.Group>()
   private cursor = new THREE.Group()
   private cursorFill: THREE.Mesh
   private cursorMat = new THREE.MeshBasicMaterial({ color: '#fff3d0', toneMapped: false })
@@ -124,15 +130,32 @@ export class BoardScene {
     this.cursor.visible = false
   }
 
-  loadLevel(level: Level): void {
+  loadLevel(level: Level, theme: Theme = 'farm'): void {
     this.level = level
-    // free what was built for the previous level: its board and the UFO beams (the rest is shared)
+    // free what was built for the previous level: its board, the UFO beams, the portals (the rest is shared)
     if (this.board) disposeTree(this.board)
     for (const b of this.beams) disposeTree(b)
+    for (const p of this.portals.values()) disposeTree(p)
     this.root.clear()
-    this.board = shadowed(new THREE.Mesh(boardGeometry(level), MATERIALS.lit))
+    this.board = shadowed(new THREE.Mesh(boardGeometry(level, BOARD_THEMES[theme]), MATERIALS.lit))
     this.root.add(this.board)
-    this.decor = farmDecorFor(level)
+    const sky = theme === 'desert' ? '#22152f' : SKY
+    ;(this.scene.background as THREE.Color).set(sky)
+    ;(this.scene.fog as THREE.Fog).color.set(sky)
+    // portals: one colour per pair
+    this.portals = new Map()
+    let pair = 0
+    level.portals.forEach((twin, i) => {
+      if (twin < i) return
+      const color = PORTAL_COLORS[pair++ % PORTAL_COLORS.length]
+      for (const cell of [i, twin]) {
+        const p = createPortal(color)
+        p.position.copy(tileCenter(level, cell % level.width, Math.floor(cell / level.width)))
+        this.portals.set(cell, p)
+        this.root.add(p)
+      }
+    })
+    this.decor = decorFor(level, theme)
     this.root.add(this.decor)
     this.rockets = []
     this.launchAt = null
@@ -279,6 +302,7 @@ export class BoardScene {
     this.sparkles.visible = this.glow.visible = false
     frame.to.actors.forEach((to, i) => this.place(i, frame.from.actors[i], to, frame, time, dt, snap))
     this.decor?.userData.update?.(time)
+    for (const p of this.portals.values()) p.userData.update(time)
     this.animateSelection(time, dt)
     this.animateArrows(time, dt)
     this.animateLaunch(time)
@@ -317,6 +341,29 @@ export class BoardScene {
     o.position.copy(tileCenter(level, x, y))
     o.visible = true
     o.scale.setScalar(1)
+    // a jump longer than one step is a teleport: sink into the entry portal, rise out of the exit
+    const jump = Math.abs(to.x - from.x) + Math.abs(to.y - from.y) > TILE
+    if (jump) {
+      const v = from.kind === 'cow' ? COW_SPEED : UFO_SPEED
+      const [dx, dy] = DELTA[from.dir]
+      const ex = from.x + dx * v, ey = from.y + dy * v
+      const entry = ey / TILE * level.width + ex / TILE
+      if (a < 0.5) {
+        o.position.copy(tileCenter(level, (from.x + (ex - from.x) * a * 2) / TILE, (from.y + (ey - from.y) * a * 2) / TILE))
+        o.scale.setScalar(Math.max(0.02, 1 - a * 2))
+      } else {
+        o.position.copy(tileCenter(level, to.x / TILE, to.y / TILE))
+        o.scale.setScalar(Math.max(0.02, (a - 0.5) * 2))
+      }
+      if (from.kind === 'ufo') o.position.y = UFO_HEIGHT
+      const flashCell = a < 0.5 ? entry : to.y / TILE * level.width + to.x / TILE
+      this.portals.get(flashCell)?.userData.flash(time)
+      if (from.kind === 'cow') {
+        this.yaw[i] = COW_YAW[to.dir]
+        o.rotation.set(0, this.yaw[i] + (a < 0.5 ? a : 1 - a) * Math.PI * 2, 0)
+      }
+      return
+    }
     const moving = from.x !== to.x || from.y !== to.y
     const heading: Dir = !moving ? to.dir
       : Math.abs(to.x - from.x) > 0 ? (to.x > from.x ? 'E' : 'W') : (to.y > from.y ? 'S' : 'N')
