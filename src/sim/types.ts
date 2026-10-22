@@ -1,5 +1,5 @@
 export type Dir = 'N' | 'E' | 'S' | 'W'
-export type CellKind = 'empty' | 'hole' | 'rocket'
+export type CellKind = 'empty' | 'hole' | 'rocket' | 'portal'
 
 export interface Spawn {
   x: number
@@ -16,6 +16,7 @@ export interface Level {
   cells: CellKind[] // index = y * width + x
   wallN: boolean[] // wall on the north side of each cell
   wallW: boolean[] // wall on the west side of each cell
+  portals: number[] // for a portal cell, the index of its twin; -1 elsewhere
   cows: Spawn[]
   ufos: Spawn[]
   stock: Record<Dir, number>
@@ -39,7 +40,7 @@ export interface SimState {
   actors: Actor[] // cows first, then ufos, in level order
 }
 
-export type SimEventType = 'saved' | 'hole' | 'abducted' | 'ufoInRocket' | 'ufoHole' | 'arrow' | 'loop'
+export type SimEventType = 'saved' | 'hole' | 'abducted' | 'ufoInRocket' | 'ufoHole' | 'arrow' | 'loop' | 'teleport'
 
 export interface SimEvent {
   tick: number
@@ -47,6 +48,7 @@ export interface SimEvent {
   actor: number
   by?: number
   cell?: number
+  to?: number // teleport: the exit portal
 }
 
 export type Outcome = { result: 'won' } | { result: 'failed'; cause: SimEvent }

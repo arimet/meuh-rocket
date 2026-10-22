@@ -41,18 +41,26 @@ export function parseLevel(json: unknown): Level {
   const width = (lineLen - 1) / 2
   const height = (rows.length - 1) / 2
   const cells: CellKind[] = []
+  const pairs: Record<string, number[]> = {}
   const wallN: boolean[] = []
   const wallW: boolean[] = []
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const c = rows[2 * y + 1][2 * x + 1]
-      const kind = CELL_CHARS[c]
+      const kind = /[1-9]/.test(c) ? 'portal' : CELL_CHARS[c]
+      if (kind === 'portal') (pairs[c] ??= []).push(y * width + x)
       if (!kind) fail(`Case (${x}, ${y}) : caractère inconnu « ${c} »`)
       cells.push(kind)
       wallN.push(rows[2 * y][2 * x + 1] === '-')
       wallW.push(rows[2 * y + 1][2 * x] === '|')
     }
+  }
+  const portals = cells.map(() => -1)
+  for (const [digit, at] of Object.entries(pairs)) {
+    if (at.length !== 2) fail(`Téléporteur « ${digit} » : ${at.length} case(s), il en faut exactement 2`)
+    portals[at[0]] = at[1]
+    portals[at[1]] = at[0]
   }
   for (let x = 0; x < width; x++) {
     if (rows[0][2 * x + 1] !== '-') fail(`Mur de bord manquant en ligne 1, case ${x}`)
@@ -107,6 +115,7 @@ export function parseLevel(json: unknown): Level {
     cells,
     wallN,
     wallW,
+    portals,
     cows: spawns('cows'),
     ufos: spawns('ufos'),
     stock,

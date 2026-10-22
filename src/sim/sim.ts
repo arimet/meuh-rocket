@@ -39,6 +39,13 @@ export function step(level: Level, arrows: Arrows, state: SimState): { state: Si
     if (kind === 'rocket') {
       a.status = a.kind === 'cow' ? 'saved' : 'lost'
       events.push({ tick, type: a.kind === 'cow' ? 'saved' : 'ufoInRocket', actor: i, cell })
+    } else if (kind === 'portal') {
+      // jump to the twin portal, keep the heading, then the wall rule applies at the exit
+      const to = level.portals[cell]
+      a.x = (to % level.width) * TILE
+      a.y = Math.floor(to / level.width) * TILE
+      events.push({ tick, type: 'teleport', actor: i, cell, to })
+      a.dir = chooseDir(level, arrows, to % level.width, Math.floor(to / level.width), a.dir)
     } else if (kind === 'hole') {
       a.status = 'lost'
       events.push({ tick, type: a.kind === 'cow' ? 'hole' : 'ufoHole', actor: i, cell })

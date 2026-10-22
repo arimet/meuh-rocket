@@ -89,3 +89,21 @@ describe('stored solution', () => {
     expect(() => parseLevel({ grid: ['+-+-+', '|. R|', '+-+-+'], cows: [[0, 0, 'E']], solution: [[5, 0, 'S']] })).toThrow()
   })
 })
+
+describe('portals', () => {
+  it('pairs the two cells carrying the same digit', () => {
+    const l = lvl(['+-+-+-+', '|1 . 1|', '+-+-+-+'])
+    expect(l.cells[0]).toBe('portal')
+    expect(l.cells[2]).toBe('portal')
+    expect(l.portals[0]).toBe(2)
+    expect(l.portals[2]).toBe(0)
+    expect(l.portals[1]).toBe(-1)
+  })
+  it('rejects a portal without exactly one twin', () => {
+    expect(() => lvl(['+-+-+-+', '|1 . .|', '+-+-+-+'])).toThrow(/1/)
+    expect(() => lvl(['+-+-+-+', '|1 1 1|', '+-+-+-+'])).toThrow(/1/)
+  })
+  it('rejects a spawn on a portal', () => {
+    expect(() => lvl(['+-+-+-+', '|1 . 1|', '+-+-+-+'], { cows: [[0, 0, 'E']] })).toThrow()
+  })
+})

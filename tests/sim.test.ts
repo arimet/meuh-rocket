@@ -103,6 +103,43 @@ describe('run', () => {
   })
 })
 
+describe('portals', () => {
+  it('a cow comes out of the twin portal keeping its direction', () => {
+    const l = lvl(['+-+-+-+-+-+', '|. 1 . . .|', '+-+-+-+-+-+', '|1 . . . R|', '+-+-+-+-+-+'], { cows: [[0, 0, 'E']] })
+    const r = run(l, arrows())
+    expect(r.outcome.result).toBe('won')
+    const tp = r.events.find(e => e.type === 'teleport')!
+    expect(tp).toMatchObject({ actor: 0, cell: 1, to: 5 })
+    // right after the jump the cow stands on the exit portal, still facing east
+    const after = r.history[tp.tick].actors[0]
+    expect([after.x / 12, after.y / 12, after.dir]).toEqual([0, 1, 'E'])
+  })
+
+  it('applies the wall rule when the exit is blocked', () => {
+    // exit at (3,1) facing east hits the border: it turns right (south is blocked too), then left (north)
+    const l = lvl(['+-+-+-+-+', '|. 1 . R|', '+-+-+-+ +', '|. . . 1|', '+-+-+-+-+'], { cows: [[0, 0, 'E']] })
+    const r = run(l, arrows())
+    expect(r.outcome.result).toBe('won')
+  })
+
+  it('UFOs use portals too', () => {
+    const l = lvl(['+-+-+-+-+-+', '|. 1 . . .|', '+-+-+-+-+-+', '|1 . . . .|', '+-+-+-+-+-+', '|. . . . R|', '+-+-+-+-+-+'],
+      { cows: [[0, 2, 'E']], ufos: [[0, 0, 'E']] })
+    const r = run(l, arrows())
+    expect(r.events.some(e => e.type === 'teleport' && e.actor === 1)).toBe(true)
+  })
+
+  it('a cow teleporting next to a UFO is abducted', () => {
+    const l = lvl(['+-+-+-+-+-+', '|. 1 . . .|', '+-+-+-+-+-+', '|1 . . . R|', '+-+-+-+-+-+'], { cows: [[0, 0, 'E']], ufos: [[3, 1, 'W']] })
+    expect(run(l, arrows()).outcome).toMatchObject({ result: 'failed', cause: { type: 'abducted' } })
+  })
+
+  it('no arrow on a portal', () => {
+    const l = lvl(['+-+-+-+-+-+', '|. 1 . . .|', '+-+-+-+-+-+', '|1 . . . R|', '+-+-+-+-+-+'], { cows: [[0, 0, 'E']], stock: { S: 1 } })
+    expect(canPlace(l, arrows(), 1, 'S')).toBe(false)
+  })
+})
+
 describe('canPlace', () => {
   const l = lvl(['+-+-+-+-+', '|. . O R|', '+-+-+-+-+'], { cows: [[0, 0, 'E']], stock: { S: 1 } })
   it('accepts an empty cell with stock', () => expect(canPlace(l, arrows(), 1, 'S')).toBe(true))
