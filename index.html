@@ -1,16 +1,57 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Meuh Rocket!</title>
-  <meta name="description" content="Guide the cows to the rocket before the UFOs beam them up. A voxel puzzle game in the spirit of ChuChu Rocket!">
+  <title>Meuh Rocket! · Cow and UFO puzzle game in your browser</title>
+  <meta name="description" content="Steer the cows into the escape rocket before the UFOs beam them up. 40 free voxel puzzles in three worlds, in the spirit of ChuChu Rocket!">
+  <link rel="canonical" href="https://arimet.github.io/meuh-rocket/">
+  <meta name="theme-color" content="#141a33">
+  <meta name="author" content="Anthony Rimet">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Meuh Rocket!">
+  <meta property="og:title" content="Meuh Rocket!">
+  <meta property="og:description" content="Steer the cows into the escape rocket before the UFOs beam them up. 40 free voxel puzzles in three worlds, in the spirit of ChuChu Rocket!">
+  <meta property="og:url" content="https://arimet.github.io/meuh-rocket/">
+  <meta property="og:image" content="https://arimet.github.io/meuh-rocket/og.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The Meuh Rocket! sign above a voxel farm board with cows, two UFOs, arrows and a red rocket">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="fr_FR">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Meuh Rocket!">
+  <meta name="twitter:description" content="Steer the cows into the escape rocket before the UFOs beam them up. 40 free voxel puzzles in three worlds, in the spirit of ChuChu Rocket!">
+  <meta name="twitter:image" content="https://arimet.github.io/meuh-rocket/og.jpg">
+  <meta name="twitter:image:alt" content="The Meuh Rocket! sign above a voxel farm board with cows, two UFOs, arrows and a red rocket">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "VideoGame",
+    "name": "Meuh Rocket!",
+    "url": "https://arimet.github.io/meuh-rocket/",
+    "description": "Steer the cows into the escape rocket before the UFOs beam them up. 40 free voxel puzzles in three worlds, in the spirit of ChuChu Rocket!",
+    "image": "https://arimet.github.io/meuh-rocket/og.jpg",
+    "genre": "Puzzle",
+    "gamePlatform": "Web browser",
+    "applicationCategory": "Game",
+    "operatingSystem": "Any",
+    "inLanguage": ["en", "fr"],
+    "isAccessibleForFree": true,
+    "license": "https://opensource.org/license/mit",
+    "codeRepository": "https://github.com/arimet/meuh-rocket",
+    "author": { "@type": "Person", "name": "Anthony Rimet", "url": "https://arimet.github.io/" }
+  }
+  </script>
 </head>
 <body>
   <canvas id="scene"></canvas>
   <div id="ui"></div>
+  <noscript><p>Meuh Rocket! is a puzzle game: steer the cows into the escape rocket before the UFOs beam them up. It needs JavaScript and WebGL.</p></noscript>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
