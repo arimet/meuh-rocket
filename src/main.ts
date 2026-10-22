@@ -164,8 +164,21 @@ const dev = {
   timeScale: 1,
   step(dt: number) { clock += dt; scene.render(game.update(dt), clock) },
 }
+// ?fps shows a frame counter
+const fpsEl = new URLSearchParams(location.search).has('fps') ? document.createElement('div') : null
+let frames = 0, fpsAt = performance.now()
+if (fpsEl) {
+  fpsEl.className = 'fps'
+  document.body.append(fpsEl)
+}
+
 let prev = performance.now()
 scene.renderer.setAnimationLoop(now => {
+  if (fpsEl && ++frames && now - fpsAt > 500) {
+    fpsEl.textContent = `${Math.round((frames * 1000) / (now - fpsAt))} i/s · ${scene.quality}`
+    frames = 0
+    fpsAt = now
+  }
   const dt = Math.min(0.1, (now - prev) / 1000) * dev.timeScale
   prev = now
   clock += dt

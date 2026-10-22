@@ -5,6 +5,8 @@ import type { Actor, Arrows, Dir, Level } from '../sim/types'
 import {
   BOARD_MARGIN, MATERIALS, arrowGeometry, boardGeometry, createCow, createUfo, farmDecor, rocketGeometry, tileCenter, ufoBeam,
 } from './models'
+import { createDiorama } from './diorama'
+import { detectQuality } from './quality'
 import { createStage } from './stage'
 import { type Pose, gait } from './gait'
 import { VOXELS_PER_TILE } from './voxel'
@@ -89,11 +91,20 @@ export class BoardScene {
     new THREE.MeshBasicMaterial({ color: '#ffb347', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false }),
   )
 
+  readonly quality = detectQuality()
+  private diorama: ReturnType<typeof createDiorama> | null = null
+
   constructor(private canvas: HTMLCanvasElement) {
     const stage = createStage(canvas)
     this.renderer = stage.renderer
     this.scene = stage.scene
     this.scene.add(this.root)
+    if (this.quality === 'high') this.diorama = createDiorama(this.renderer, this.scene, this.camera)
+    else {
+      // light renderer: smaller shadow map, capped resolution, no post-processing
+      stage.key.shadow.mapSize.set(1024, 1024)
+      this.renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5))
+    }
     // selection cursor: four voxel corner brackets over a soft fill
     this.cursorFill = new THREE.Mesh(
       new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2),
@@ -265,7 +276,8 @@ export class BoardScene {
     this.animateSelection(time, dt)
     this.animateArrows(time, dt)
     this.animateLaunch(time)
-    this.renderer.render(this.scene, this.camera)
+    if (this.diorama) this.diorama.render()
+    else this.renderer.render(this.scene, this.camera)
   }
 
   // Rockets lift off with the saved cows; resolves once they are out of frame.
@@ -425,6 +437,25 @@ export class BoardScene {
     this.renderer.setSize(w, h, false)
     this.camera.aspect = w / h
     this.fitCamera()
+    if (this.diorama) {
+      this.diorama.setSize(w, h)
+      this.diorama.setFocus(...this.boardRect())
+    }
+  }
+
+  // The board's bounding rectangle on screen, in uv space, with a small margin.
+  private boardRect(): [THREE.Vector2, THREE.Vector2] {
+    const level = this.level
+    const min = new THREE.Vector2(1, 1), max = new THREE.Vector2(0, 0)
+    if (!level) return [new THREE.Vector2(0, 0), new THREE.Vector2(1, 1)]
+    const hw = level.width / 2 + 0.3, hh = level.height / 2 + 0.3
+    for (const x of [-hw, hw]) for (const z of [-hh, hh]) for (const y of [0, UFO_HEIGHT + 0.3]) {
+      const p = new THREE.Vector3(x, y, z).project(this.camera)
+      const u = new THREE.Vector2((p.x + 1) / 2, (p.y + 1) / 2)
+      min.min(u)
+      max.max(u)
+    }
+    return [min.subScalar(0.01), max.addScalar(0.01)]
   }
 
   // Closest camera, on a fixed plunging angle, that keeps the whole board inside a safe frame.

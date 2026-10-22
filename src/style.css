@@ -233,6 +233,8 @@ button { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-c
 .dialog .paper { max-width: 30ch; }
 .hud-arrows .solution .icon { color: var(--hay); }
 
+.fps { position: fixed; left: 8px; bottom: 8px; z-index: 30; padding: 3px 7px; background: #000a; color: #b6ff7a; font: 700 13px/1 var(--font); pointer-events: none; }
+
 .portrait { display: none; }
 @media (orientation: portrait) and (pointer: coarse) {
   .portrait { position: fixed; left: 16px; right: 16px; bottom: 96px; display: block; z-index: 10; max-width: none; font-weight: 700; }
