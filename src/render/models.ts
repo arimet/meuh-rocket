@@ -254,18 +254,19 @@ export function arrowGeometry(): THREE.BufferGeometry {
 export const BOARD_MARGIN = 3 // voxels of field around the tiles
 export const GROUND = 4 // voxels of earth under the grass top
 
-export function tileCenter(level: Level, x: number, y: number): THREE.Vector3 {
-  return new THREE.Vector3(x - (level.width - 1) / 2, 0, y - (level.height - 1) / 2)
+export function tileCenter(level: Level, x: number, y: number, out = new THREE.Vector3()): THREE.Vector3 {
+  return out.set(x - (level.width - 1) / 2, 0, y - (level.height - 1) / 2)
 }
 
 export interface BoardTheme {
   tiles: [ColorName, ColorName]; speck: ColorName; line: ColorName; margin: ColorName
   ground: [ColorName, ColorName, ColorName]; rim: ColorName; post: ColorName; rail: ColorName
+  sky: string // background and fog
 }
 export const BOARD_THEMES: Record<Theme, BoardTheme> = {
-  farm: { tiles: ['grass1', 'grass2'], speck: 'grass3', line: 'grassLine', margin: 'grass3', ground: ['soil', 'dirt', 'dirtDark'], rim: 'dirtDark', post: 'woodDark', rail: 'woodLight' },
-  ship: { tiles: ['deck1', 'deck2'], speck: 'deckSpeck', line: 'deckLine', margin: 'deckMargin', ground: ['hullDark', 'hull', 'hull'], rim: 'screenWarn', post: 'hullDark', rail: 'energy' },
-  desert: { tiles: ['sand1', 'sand2'], speck: 'sandSpeck', line: 'sandLine', margin: 'sandMargin', ground: ['clayDark', 'clay', 'rockRed'], rim: 'clayDark', post: 'steel', rail: 'steelLight' },
+  farm: { tiles: ['grass1', 'grass2'], speck: 'grass3', line: 'grassLine', margin: 'grass3', ground: ['soil', 'dirt', 'dirtDark'], rim: 'dirtDark', post: 'woodDark', rail: 'woodLight', sky: '#141a33' },
+  ship: { tiles: ['deck1', 'deck2'], speck: 'deckSpeck', line: 'deckLine', margin: 'deckMargin', ground: ['hullDark', 'hull', 'hull'], rim: 'screenWarn', post: 'hullDark', rail: 'energy', sky: '#05070f' },
+  desert: { tiles: ['sand1', 'sand2'], speck: 'sandSpeck', line: 'sandLine', margin: 'sandMargin', ground: ['clayDark', 'clay', 'rockRed'], rim: 'clayDark', post: 'steel', rail: 'steelLight', sky: '#22152f' },
 }
 
 // The playing field as one chunk of earth: tiles, grid lines, holes, fences on walls.

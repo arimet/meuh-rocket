@@ -64,6 +64,10 @@ function startLevel(id: number) {
 // Leaving a level abandons its run: no more sounds, saves or victory screen from it.
 function backdrop() {
   game.dispose()
+  // a won level stays behind the menu: put its cows and rockets back
+  game = new GameController(level)
+  scene.resetLaunch()
+  scene.setArrows(game.arrows)
   hovered = null
   playing = false
   closePicker()

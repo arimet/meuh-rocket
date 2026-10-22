@@ -13,7 +13,7 @@ import { createDiorama } from './diorama'
 import { PORTAL_COLORS, createPortal } from './portal'
 import { disposeTree } from './dispose'
 import { detectQuality } from './quality'
-import { SKY, createStage } from './stage'
+import { createStage } from './stage'
 import { type Pose, gait } from './gait'
 import { VOXELS_PER_TILE } from './voxel'
 
@@ -72,6 +72,7 @@ export class BoardScene {
   private cursorFill: THREE.Mesh
   private cursorMat = new THREE.MeshBasicMaterial({ color: '#fff3d0', toneMapped: false })
   private hoverCell: number | null = null
+  private goal = new THREE.Vector3()
   private selectedCell: number | null = null
   private selectedAt = -1
   private arrowMeshes = new Map<number, THREE.Mesh>()
@@ -139,7 +140,7 @@ export class BoardScene {
     this.root.clear()
     this.board = shadowed(new THREE.Mesh(boardGeometry(level, BOARD_THEMES[theme]), MATERIALS.lit))
     this.root.add(this.board)
-    const sky = { farm: SKY, desert: '#22152f', ship: '#05070f' }[theme]
+    const sky = BOARD_THEMES[theme].sky
     ;(this.scene.background as THREE.Color).set(sky)
     ;(this.scene.fog as THREE.Fog).color.set(sky)
     // portals: one colour per pair
@@ -226,15 +227,15 @@ export class BoardScene {
     this.selectedCell = cell
   }
 
-  private cellCenter(cell: number) {
+  private cellCenter(cell: number, out?: THREE.Vector3) {
     const level = this.level!
-    return tileCenter(level, cell % level.width, Math.floor(cell / level.width))
+    return tileCenter(level, cell % level.width, Math.floor(cell / level.width), out)
   }
 
   private animateSelection(time: number, dt: number) {
     const target = this.selectedCell ?? this.hoverCell
     if (target === null) { this.cursor.visible = false; return }
-    const goal = this.cellCenter(target)
+    const goal = this.cellCenter(target, this.goal)
     const jump = !this.cursor.visible || this.cursor.position.distanceTo(goal) > 4
     this.cursor.visible = true
     if (jump || REDUCED_MOTION) this.cursor.position.copy(goal)
@@ -310,6 +311,11 @@ export class BoardScene {
     else this.renderer.render(this.scene, this.camera)
   }
 
+  // Rockets back on the pad, e.g. when a won level stays on screen behind the menu.
+  resetLaunch(): void {
+    this.launchAt = null
+  }
+
   // Rockets lift off with the saved cows; resolves once they are out of frame.
   launchRocket(): Promise<void> {
     this.launchAt = this.lastTime
@@ -338,7 +344,7 @@ export class BoardScene {
     const o = this.actors[i]
     const a = frame.alpha
     const x = (from.x + (to.x - from.x) * a) / TILE, y = (from.y + (to.y - from.y) * a) / TILE
-    o.position.copy(tileCenter(level, x, y))
+    tileCenter(level, x, y, o.position)
     o.visible = true
     o.scale.setScalar(1)
     // a jump longer than one step is a teleport: sink into the entry portal, rise out of the exit
@@ -349,10 +355,10 @@ export class BoardScene {
       const ex = from.x + dx * v, ey = from.y + dy * v
       const entry = ey / TILE * level.width + ex / TILE
       if (a < 0.5) {
-        o.position.copy(tileCenter(level, (from.x + (ex - from.x) * a * 2) / TILE, (from.y + (ey - from.y) * a * 2) / TILE))
+        tileCenter(level, (from.x + (ex - from.x) * a * 2) / TILE, (from.y + (ey - from.y) * a * 2) / TILE, o.position)
         o.scale.setScalar(Math.max(0.02, 1 - a * 2))
       } else {
-        o.position.copy(tileCenter(level, to.x / TILE, to.y / TILE))
+        tileCenter(level, to.x / TILE, to.y / TILE, o.position)
         o.scale.setScalar(Math.max(0.02, (a - 0.5) * 2))
       }
       if (from.kind === 'ufo') o.position.y = UFO_HEIGHT
@@ -399,7 +405,8 @@ export class BoardScene {
       o.visible = from.status === 'active'
       o.scale.setScalar(1 - a)
     } else if (to.status === 'lost') {
-      const hole = level.cells[Math.round(to.y / TILE) * level.width + Math.round(to.x / TILE)] === 'hole'
+      // holes only swallow at a tile centre; a cow lost between tiles was abducted
+      const hole = to.x % TILE === 0 && to.y % TILE === 0 && level.cells[(to.y / TILE) * level.width + to.x / TILE] === 'hole'
       if (!hole) {
         // abducted: stays put until the cause phase plays the abduction
         const ufo = abduction ? this.actors[abduction.by!] : null

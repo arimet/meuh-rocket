@@ -38,6 +38,7 @@ export class GameController {
   private fast = 1
   private runAge = 0
   private solutionShown = false
+  private start: SimState | null = null // board at rest, rebuilt only when the arrows change
 
   constructor(readonly level: Level, private hooks: ControllerHooks = {}) {}
 
@@ -67,6 +68,7 @@ export class GameController {
     const sol = this.level.solution
     if (this.phase !== 'placing' || !sol) return false
     this.placed = new Map(sol)
+    this.start = null
     this.solutionShown = true
     return true
   }
@@ -80,15 +82,18 @@ export class GameController {
   place(cell: number, dir: Dir): boolean {
     if (this.phase !== 'placing' || !canPlace(this.level, this.placed, cell, dir)) return false
     this.placed.set(cell, dir)
+    this.start = null
     return true
   }
 
   remove(cell: number): boolean {
-    return this.phase === 'placing' && this.placed.delete(cell)
+    if (this.phase !== 'placing' || !this.placed.delete(cell)) return false
+    this.start = null
+    return true
   }
 
   clear(): void {
-    if (this.phase === 'placing') this.placed.clear()
+    if (this.phase === 'placing') { this.placed.clear(); this.start = null }
   }
 
   launch(): boolean {
@@ -118,8 +123,8 @@ export class GameController {
     if (this.phase === 'running') this.runAge += dt
     const r = this.result
     if (!r || this.phase === 'placing') {
-      const s = createState(this.level, this.placed)
-      return this.frame(s, s, 0)
+      this.start ??= createState(this.level, this.placed)
+      return this.frame(this.start, this.start, 0)
     }
     const h = r.history
     const last = h.length - 1

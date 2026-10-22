@@ -137,18 +137,17 @@ export function createScreens(root: HTMLElement, on: ScreenHandlers) {
   victory.append(vSignWrap, vText, actions(button('Menu', '', on.onMenu, icon('menu')), vNext))
 
   // confirmation before revealing the solution: it costs the level's stars
-  const confirm = h('div', 'dialog')
-  confirm.setAttribute('role', 'dialog')
-  confirm.setAttribute('aria-modal', 'true')
+  // a native modal dialog: it traps focus and closes on Escape
+  const confirm = h('dialog', 'dialog')
   confirm.setAttribute('aria-labelledby', 'confirm-title')
   const cTitle = h('h2', '', 'Afficher la solution\u00a0?')
   cTitle.id = 'confirm-title'
   const cYes = button('Afficher', 'red', () => { closeConfirm(); on.onSolution() }, icon('bulb'))
   const cNo = button('Annuler', '', () => closeConfirm())
   confirm.append(hanging('', cTitle), h('p', 'paper', 'Tu pourras toujours finir le niveau, mais tu ne gagneras pas d’étoile cette fois.'), actions(cNo, cYes))
-  const openConfirm = () => { confirm.classList.add('on'); cYes.focus() }
-  const closeConfirm = () => { confirm.classList.remove('on'); solution.focus() }
-  confirm.addEventListener('keydown', e => { if (e.key === 'Escape') closeConfirm() })
+  const openConfirm = () => { confirm.showModal(); cYes.focus() }
+  const closeConfirm = () => confirm.close()
+  confirm.addEventListener('close', () => solution.focus())
   confirm.addEventListener('click', e => { if (e.target === confirm) closeConfirm() })
 
   const portrait = h('div', 'portrait paper', 'Tourne ton téléphone pour jouer')

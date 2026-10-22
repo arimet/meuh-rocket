@@ -118,10 +118,14 @@ export function run(level: Level, arrows: Arrows): RunResult {
   }
 }
 
+const spawnCells = new WeakMap<Level, Set<number>>()
+
 export function canPlace(level: Level, arrows: Arrows, cell: number, dir: Dir): boolean {
   if (!Number.isInteger(cell) || cell < 0 || cell >= level.cells.length) return false
   if (level.cells[cell] !== 'empty' || arrows.has(cell)) return false
-  if ([...level.cows, ...level.ufos].some(s => s.y * level.width + s.x === cell)) return false
+  let spawns = spawnCells.get(level)
+  if (!spawns) spawnCells.set(level, (spawns = new Set([...level.cows, ...level.ufos].map(s => s.y * level.width + s.x))))
+  if (spawns.has(cell)) return false
   let used = 0
   for (const d of arrows.values()) if (d === dir) used++
   return used < level.stock[dir]

@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 
-export const SKY = '#141a33'
+import { BOARD_THEMES } from './models'
+
+const SKY = BOARD_THEMES.farm.sky
 
 // Renderer, night sky, warm key light with soft shadows. Shared by the game and the gallery.
 export function createStage(canvas: HTMLCanvasElement) {
