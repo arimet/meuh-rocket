@@ -58,5 +58,6 @@ export interface RunResult {
   history: SimState[]
   events: SimEvent[]
   visited: Set<number>
+  firstVisit: Map<number, number> // cell → tick an actor first reached its centre
   arrowsHit: Set<number>
 }

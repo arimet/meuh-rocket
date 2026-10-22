@@ -14,6 +14,8 @@ const keyOf = (p: Arrows) => [...p].sort((a, b) => a[0] - b[0]).map(([c, d]) => 
 
 // Only cells visited by the current run can hold the next useful arrow: the run
 // with and without that arrow is identical until someone reaches its cell.
+// And when the run fails at tick t, that arrow must be reached before t, or the same failure
+// happens again (a looping cow has already gone round its whole cycle by then).
 export function solve(level: Level): SolveReport {
   const seen = new Set<string>()
   let solutions = 0
@@ -28,7 +30,9 @@ export function solve(level: Level): SolveReport {
       solutions++
       if (!example || p.size < example.size) example = new Map(p)
     }
-    for (const cell of r.visited) {
+    const failedAt = r.outcome.result === 'failed' ? r.outcome.cause.tick : Infinity
+    for (const [cell, tick] of r.firstVisit) {
+      if (tick >= failedAt) continue
       for (const dir of DIRS) {
         if (!canPlace(level, p, cell, dir)) continue
         p.set(cell, dir)
